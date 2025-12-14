@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2022년 1등급 수상작 - 파일 다운로드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .file-list {
+            margin-top: 30px;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .file-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-info h3 {
+            color: #764ba2;
+            margin-bottom: 5px;
+        }
+
+        .file-info p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .download-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .download-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="test.html" class="back-button">← 돌아가기</a>
+        
+        <div class="header">
+            <h1>2022년 1등급 수상작</h1>
+            <p>협업 학습을 통한 창의적 문제 해결 능력 향상 <span class="badge">1등급</span></p>
+        </div>
+
+        <div class="file-list">
+            <div class="file-item">
+                <div class="file-info">
+                    <h3>📄 연구 계획서</h3>
+                    <p>연구 목적, 방법론, 예상 결과 등이 포함된 계획서 (PDF, 1.9MB)</p>
+                </div>
+                <a href="#" class="download-button" onclick="downloadFile('research-plan-2022.pdf', event)">다운로드</a>
+            </div>
+
+            <div class="file-item">
+                <div class="file-info">
+                    <h3>📊 연구 결과 보고서</h3>
+                    <p>실험 결과 및 분석 내용이 포함된 최종 보고서 (PDF, 4.5MB)</p>
+                </div>
+                <a href="#" class="download-button" onclick="downloadFile('research-report-2022.pdf', event)">다운로드</a>
+            </div>
+
+            <div class="file-item">
+                <div class="file-info">
+                    <h3>📈 데이터 분석 자료</h3>
+                    <p>통계 분석 및 그래프 자료 (Excel, 1.5MB)</p>
+                </div>
+                <a href="#" class="download-button" onclick="downloadFile('data-analysis-2022.xlsx', event)">다운로드</a>
+            </div>
+
+            <div class="file-item">
+                <div class="file-info">
+                    <h3>📽️ 발표 자료</h3>
+                    <p>수상작 발표에 사용된 프레젠테이션 자료 (PPTX, 6.8MB)</p>
+                </div>
+                <a href="#" class="download-button" onclick="downloadFile('presentation-2022.pptx', event)">다운로드</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadFile(filename, event) {
+            event.preventDefault();
+            alert('파일 다운로드 기능입니다.\n실제 파일 경로를 설정해주세요.\n\n파일명: ' + filename);
+        }
+    </script>
+</body>
+</html>
+
