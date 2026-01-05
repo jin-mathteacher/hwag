@@ -277,7 +277,7 @@
             // Supabase가 아직 로드되지 않았으면 직접 생성
             if (typeof supabase !== 'undefined') {
                 const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
-                const SUPABASE_ANON_KEY = 'sb_publishable_6OlVgtiomTJGkOyhBXTqEQ_nMr3WUGw';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
                 window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 console.log('✅ Supabase 클라이언트 생성 완료');
                 return window.supabaseClient;
