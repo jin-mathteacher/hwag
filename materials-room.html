@@ -1,244 +1,199 @@
-<script>
-        // 1. 설정값
-        const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-        const SUPABASE_BUCKET = 'class-materials';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자료방 (통합 버전)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* 디자인 스타일 (기존과 동일) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #667eea; padding-bottom: 20px; }
+        .upload-section { background: #f8f9fa; padding: 30px; border-radius: 15px; border: 2px dashed #667eea; margin-bottom: 30px; text-align: center; transition: all 0.3s; }
+        .upload-section.drag-over { background: #e3f2fd; border-color: #2196f3; transform: scale(1.02); }
+        .file-item { background: #f1f3f5; padding: 15px; margin: 10px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        button { cursor: pointer; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; }
+        .upload-btn { background: #667eea; color: white; }
+        .delete-btn { background: #ff6b6b; color: white; margin-left: 10px; }
+        h3 { cursor: pointer; color: #4c6ef5; text-decoration: underline; }
+    </style>
+</head>
+<body>
 
-        // 2. Supabase 클라이언트 가져오기 (1단계에서 만든 것)
-        const supabase = window.supabaseClient;
+    <div class="container">
+        <div class="header">
+            <h1>📚 자료방</h1>
+            <p>파일을 드래그하거나 버튼을 눌러 업로드하세요</p>
+        </div>
 
-        // 3. 세션 확인 (로그인 체크)
-        // 로그인 안 했으면 '익명'으로라도 처리하게 수정 (테스트 위해)
-        let session = {};
+        <div class="upload-section" id="dropArea">
+            <p style="font-size: 1.2rem; margin-bottom: 10px;">📂 여기에 파일을 놓으세요</p>
+            <input type="file" id="fileInput" style="display: none;" multiple>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">파일 선택하기</button>
+            <div id="statusMsg" style="margin-top: 15px; color: #666;"></div>
+        </div>
+
+        <div id="fileList">
+            <p>로딩 중...</p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // [중요] 여기에 선생님의 키를 정확히 확인해주세요!
+        // ==========================================
+        const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+        
+        // ★ 주의: 키가 'sb_publishable_...'로 시작하면 안 될 수도 있습니다.
+        // 보통 'eyJ...'로 시작하는 긴 문자열입니다. (Project Settings -> API -> anon public key)
+        // 만약 아래 키로 안 되면, 대시보드에서 'anon' 키를 다시 복사해서 넣어보세요.
+        const SUPABASE_KEY = 'sb_publishable_6OlVgtiomTJGkOyhBXTqEQ_nMr3WUGw'; 
+
+        // 1. Supabase 연결 시작
+        let supabase;
         try {
-            session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
-        } catch (e) {
-            console.log('세션 정보 없음');
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("✅ Supabase 연결 성공");
+        } catch (err) {
+            console.error("Supabase 연결 실패:", err);
+            alert("오류: Supabase 연결에 실패했습니다. 키를 확인해주세요.");
         }
 
-        // 4. 드래그 앤 드롭 기능 활성화
+        const BUCKET_NAME = 'class-materials';
+        const TABLE_NAME = 'files';
+
+        // 2. 드래그 앤 드롭 설정
         const dropArea = document.getElementById('dropArea');
-        const uploadSection = document.getElementById('uploadSection');
         const fileInput = document.getElementById('fileInput');
+        const statusMsg = document.getElementById('statusMsg');
 
-        if (dropArea) {
-            // 박스 안에 파일이 들어왔을 때 (색깔 변경)
-            dropArea.addEventListener('dragover', function(e) {
-                e.preventDefault(); // 필수: 브라우저가 파일 여는 것 방지
-                e.stopPropagation();
-                uploadSection.classList.add('drag-over');
-            });
+        // 드래그 들어왔을 때
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('drag-over');
+        });
 
-            // 박스 밖으로 나갔을 때 (색깔 복구)
-            dropArea.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadSection.classList.remove('drag-over');
-            });
+        // 드래그 나갔을 때
+        dropArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('drag-over');
+        });
 
-            // 파일을 놓았을 때 (업로드 시작)
-            dropArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadSection.classList.remove('drag-over');
-                
-                const files = Array.from(e.dataTransfer.files);
-                handleFiles(files); // 업로드 함수 실행
-            });
+        // 파일을 놓았을 때
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            handleUpload(files);
+        });
+
+        // 파일 선택 버튼 눌렀을 때
+        fileInput.addEventListener('change', (e) => {
+            handleUpload(e.target.files);
+        });
+
+        // 3. 업로드 처리 함수
+        async function handleUpload(files) {
+            if (files.length === 0) return;
+            statusMsg.innerText = "⏳ 업로드 중...";
+
+            for (let file of files) {
+                try {
+                    // 한글 파일명 깨짐 방지: 시간_랜덤_파일명
+                    const safeName = `${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
+                    const filePath = `uploads/${safeName}`; // 확장자는 생략하거나 원본 유지 가능
+
+                    // A. 스토리지에 올리기
+                    const { data: storageData, error: storageError } = await supabase.storage
+                        .from(BUCKET_NAME)
+                        .upload(filePath, file);
+
+                    if (storageError) throw storageError;
+
+                    // B. DB에 정보 적기
+                    const { error: dbError } = await supabase
+                        .from(TABLE_NAME)
+                        .insert([{
+                            file_name: file.name,
+                            file_url: filePath,
+                            file_size: file.size,
+                            uploader_id: null // 익명 허용
+                        }]);
+
+                    if (dbError) throw dbError;
+
+                } catch (error) {
+                    console.error("업로드 실패:", error);
+                    alert(`"${file.name}" 업로드 실패!\n원인: ${error.message}`);
+                }
+            }
+
+            statusMsg.innerText = "✅ 업로드 완료!";
+            fileInput.value = ""; // 입력창 초기화
+            loadFiles(); // 목록 새로고침
         }
 
-        // 5. 파일 선택 버튼으로 업로드할 때
-        function handleFileSelect(event) {
-            const files = Array.from(event.target.files);
-            handleFiles(files);
-        }
+        // 4. 목록 불러오기 함수
+        async function loadFiles() {
+            const fileListDiv = document.getElementById('fileList');
+            
+            const { data, error } = await supabase
+                .from(TABLE_NAME)
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        // 6. 실제 업로드 처리 함수
-        async function handleFiles(files) {
-            if (!supabase) {
-                alert('Supabase 연결에 실패했습니다. 새로고침 해주세요.');
+            if (error) {
+                console.error(error);
+                fileListDiv.innerHTML = "<p>목록을 불러오지 못했습니다.</p>";
                 return;
             }
 
-            const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
-            progressContainer.style.display = 'block';
-
-            let uploaded = 0;
-            let failed = 0;
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                
-                // 용량 체크
-                if (file.size > MAX_FILE_SIZE) {
-                    alert(`파일 "${file.name}"이 20MB를 넘습니다.`);
-                    failed++;
-                    continue;
-                }
-
-                try {
-                    // 파일명 생성 (한글 깨짐 방지 위해 encodeURI 사용하거나 영문 변환 추천하지만, 일단 그대로)
-                    const fileExt = file.name.split('.').pop();
-                    // 이름 결정: 로그인 이름 없으면 '익명'
-                    const uploaderName = session.name || session.username || '익명'; 
-                    // 파일명 중복 방지를 위해 시간_랜덤숫자_파일명 조합
-                    const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
-                    const filePath = `materials/${fileName}`; // 폴더 경로
-
-                    // A. 스토리지에 파일 올리기
-                    const { data, error: uploadError } = await supabase.storage
-                        .from(SUPABASE_BUCKET)
-                        .upload(filePath, file);
-
-                    if (uploadError) {
-                        throw uploadError;
-                    }
-
-                    // B. DB(장부)에 기록하기
-                    const { error: dbError } = await supabase
-                        .from('files')
-                        .insert([{ 
-                            file_name: file.name, 
-                            file_url: filePath, // 경로 저장
-                            file_size: file.size, 
-                            uploader_id: null, // 익명 허용했으므로 null
-                            created_at: new Date().toISOString()
-                        }]);
-                    
-                    if (dbError) {
-                        console.error('DB 저장 실패:', dbError);
-                        // DB 실패 시 파일도 지워주는 게 정석이지만 테스트니 패스
-                    }
-
-                    uploaded++;
-
-                    // 진행바 업데이트
-                    const progress = ((i + 1) / files.length) * 100;
-                    progressFill.style.width = progress + '%';
-
-                } catch (error) {
-                    console.error('업로드 실패:', error);
-                    alert(`"${file.name}" 업로드 실패: ${error.message}`);
-                    failed++;
-                }
+            if (data.length === 0) {
+                fileListDiv.innerHTML = "<p>업로드된 파일이 없습니다.</p>";
+                return;
             }
 
-            // 마무리
-            await loadFiles(); // 목록 새로고침
+            fileListDiv.innerHTML = data.map(file => `
+                <div class="file-item">
+                    <div>
+                        <h3 onclick="downloadFile('${file.file_url}', '${file.file_name}')">📄 ${file.file_name}</h3>
+                        <small>${new Date(file.created_at).toLocaleString()} | ${(file.file_size/1024).toFixed(1)} KB</small>
+                    </div>
+                    <button class="delete-btn" onclick="deleteFile('${file.id}', '${file.file_url}')">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        // 5. 다운로드 함수
+        async function downloadFile(path, name) {
+            const { data, error } = await supabase.storage.from(BUCKET_NAME).download(path);
+            if (error) { alert("다운로드 실패"); return; }
             
-            setTimeout(() => {
-                progressContainer.style.display = 'none';
-                progressFill.style.width = '0%';
-            }, 1000);
+            const url = URL.createObjectURL(data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // 6. 삭제 함수
+        async function deleteFile(id, path) {
+            if(!confirm("삭제하시겠습니까?")) return;
             
-            fileInput.value = ''; // 입력창 비우기
-
-            if (uploaded > 0) alert(`${uploaded}개 파일 업로드 성공!`);
-        }
-
-        // 7. 파일 목록 불러오기
-        async function loadFiles() {
-            if (!supabase) return;
-
-            const fileList = document.getElementById('fileList');
+            await supabase.storage.from(BUCKET_NAME).remove([path]);
+            await supabase.from(TABLE_NAME).delete().eq('id', id);
             
-            try {
-                const { data, error } = await supabase
-                    .from('files')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    fileList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">아직 업로드된 파일이 없습니다.</p>';
-                    return;
-                }
-
-                // 목록 그리기
-                fileList.innerHTML = data.map(file => {
-                    const sizeMB = (file.file_size / (1024 * 1024)).toFixed(2);
-                    const date = new Date(file.created_at).toLocaleString();
-                    
-                    return `
-                        <div class="file-item">
-                            <div class="file-info">
-                                <h3 style="cursor:pointer; color:#667eea;" onclick="downloadFile('${file.file_url}', '${file.file_name}')">
-                                    📄 ${file.file_name}
-                                </h3>
-                                <div class="file-meta">
-                                    <span>💾 ${sizeMB} MB</span>
-                                    <span>📅 ${date}</span>
-                                </div>
-                            </div>
-                            <button class="delete-button" onclick="deleteFile('${file.id}', '${file.file_url}')">삭제</button>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('목록 로딩 실패:', error);
-                fileList.innerHTML = '<p>파일 목록을 불러오지 못했습니다.</p>';
-            }
+            alert("삭제되었습니다.");
+            loadFiles();
         }
 
-        // 8. 다운로드 함수
-        async function downloadFile(filePath, fileName) {
-            try {
-                const { data, error } = await supabase.storage
-                    .from(SUPABASE_BUCKET)
-                    .download(filePath);
-
-                if (error) throw error;
-
-                const url = URL.createObjectURL(data);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } catch (error) {
-                alert('다운로드 실패: ' + error.message);
-            }
-        }
-
-        // 9. 삭제 함수
-        async function deleteFile(id, filePath) {
-            if (!confirm('정말 삭제하시겠습니까?')) return;
-
-            try {
-                // 스토리지 파일 삭제
-                const { error: storageError } = await supabase.storage
-                    .from(SUPABASE_BUCKET)
-                    .remove([filePath]);
-                
-                if (storageError) console.warn('파일 삭제 경고:', storageError);
-
-                // DB 데이터 삭제
-                const { error: dbError } = await supabase
-                    .from('files')
-                    .delete()
-                    .eq('id', id);
-
-                if (dbError) throw dbError;
-
-                alert('삭제되었습니다.');
-                loadFiles();
-
-            } catch (error) {
-                alert('삭제 실패: ' + error.message);
-            }
-        }
-
-        // 페이지 로딩 완료 시 실행
-        window.addEventListener('load', loadFiles);
+        // 시작 시 목록 로드
+        loadFiles();
     </script>
-🚀 적용 후 체크리스트
-두 파일을 모두 수정하고 저장하셨나요?
-
-웹페이지를 열고 Ctrl + Shift + R (강력 새로고침)을 하셨나요?
-
-이제 파일을 드래그해서 네모 박스 안에 놓아보세요. 색깔이 변하거나 업로드가 시작되나요?
-
-이렇게 코드를 교체하면 기존의 엉켜있던 문제(중복 선언, 연결 실패 등)가 싹 정리될 겁니다. 해보시고 결과 알려주세요!
+</body>
+</html>
