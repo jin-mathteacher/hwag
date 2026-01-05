@@ -150,6 +150,16 @@
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
         }
 
+        .research-button {
+            top: 80px;
+        }
+
+        .login-button {
+            top: 20px;
+            right: 20px;
+            left: auto;
+        }
+
         header {
             text-align: center;
             padding: 60px 20px;
@@ -675,6 +685,10 @@
                 font-size: 0.9em;
             }
 
+            .research-button {
+                top: 70px;
+            }
+
             .journey-steps {
                 grid-template-columns: 1fr;
             }
@@ -684,6 +698,10 @@
             }
         }
     </style>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase 설정 -->
+    <script src="js/supabase-config.js"></script>
 </head>
 <body>
     <div class="background-overlay"></div>
@@ -707,6 +725,8 @@
     </div>
 
     <button class="info-button" onclick="openTrainingIntro()">📚 연수 소개</button>
+    <button class="info-button research-button" onclick="openResearchAwards()">🏆 연구대회</button>
+    <button id="loginLogoutButton" class="info-button login-button" onclick="handleLoginLogout()">🔐 로그인</button>
 
     <div class="container">
         <header>
@@ -774,29 +794,30 @@
                 </div>
             </div>
 
-            <!-- 2. 역대 전국대회 1등급 수상작 -->
+            <!-- 2. 실습 -->
             <div class="info-section">
-                <h2>역대 전국대회 1등급 수상작</h2>
+                <h2>실습</h2>
                 <div class="award-gallery">
-                    <a href="award-2024.html" class="award-card">
-                        <h3>2024년 수상작</h3>
-                        <p>디지털 교육 환경에서의 학생 참여도 향상 연구</p>
-                        <span class="award-badge">1등급</span>
+                    <a href="practice-0.html" class="award-card">
+                        <h3>실습 0 - 아이스브레이킹</h3>
                     </a>
-                    <a href="award-2023.html" class="award-card">
-                        <h3>2023년 수상작</h3>
-                        <p>AI 기반 맞춤형 학습 시스템 개발 및 적용</p>
-                        <span class="award-badge">1등급</span>
+                    <a href="practice-1.html" class="award-card">
+                        <h3>실습 1 - wordcloud</h3>
+                        <p>워드크라우드 실습</p>
                     </a>
-                    <a href="award-2022.html" class="award-card">
-                        <h3>2022년 수상작</h3>
-                        <p>협업 학습을 통한 창의적 문제 해결 능력 향상</p>
-                        <span class="award-badge">1등급</span>
+                    <a href="practice-2.html" class="award-card">
+                        <h3>실습 2 - 선생님은 어떤 연구자입니까?</h3>
                     </a>
-                    <a href="award-2021.html" class="award-card">
-                        <h3>2021년 수상작</h3>
-                        <p>메타인지 전략을 활용한 자기주도 학습 연구</p>
-                        <span class="award-badge">1등급</span>
+                    <a href="practice-3.html" class="award-card">
+                        <h3>실습 3 - 5Whys</h3>
+                        <p>5Whys 실습</p>
+                    </a>
+                    <a href="practice-4.html" class="award-card">
+                        <h3>실습 4 - 교육현안 실습하기</h3>
+                        <p>교육현안 실습</p>
+                    </a>
+                    <a href="practice-5.html" class="award-card">
+                        <h3>실습 5 - 성찰 기록 연습</h3>
                     </a>
                 </div>
             </div>
@@ -917,10 +938,68 @@
             document.body.style.overflow = 'auto';
         }
 
+        // 연구대회 모달 관련
+        function openResearchAwards() {
+            document.getElementById('researchModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeResearchModal() {
+            document.getElementById('researchModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // 로그인/로그아웃 처리
+        function handleLoginLogout() {
+            const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+            if (session.type) {
+                // 로그인 상태 - 로그아웃
+                if (confirm('로그아웃 하시겠습니까?')) {
+                    sessionStorage.removeItem('userSession');
+                    updateLoginButton();
+                    alert('로그아웃되었습니다.');
+                }
+            } else {
+                // 미로그인 상태 - 로그인 페이지로 이동
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 로그인 버튼 상태 업데이트
+        function updateLoginButton() {
+            const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+            const button = document.getElementById('loginLogoutButton');
+            
+            if (session.type) {
+                // 로그인 상태
+                let buttonText = '🚪 로그아웃';
+                if (session.type === 'admin') {
+                    buttonText = '🚪 로그아웃 (관리자)';
+                } else if (session.type === 'teacher') {
+                    buttonText = '🚪 로그아웃 (강사)';
+                } else if (session.type === 'student') {
+                    buttonText = `🚪 로그아웃 (${session.name})`;
+                }
+                button.textContent = buttonText;
+            } else {
+                // 미로그인 상태
+                button.textContent = '🔐 로그인';
+            }
+        }
+
+        // 페이지 로드 시 로그인 상태 표시
+        window.addEventListener('load', function() {
+            updateLoginButton();
+        });
+
         window.onclick = function(event) {
-            const modal = document.getElementById('trainingModal');
-            if (event.target == modal) {
+            const trainingModal = document.getElementById('trainingModal');
+            const researchModal = document.getElementById('researchModal');
+            if (event.target == trainingModal) {
                 closeTrainingModal();
+            }
+            if (event.target == researchModal) {
+                closeResearchModal();
             }
         }
     </script>
@@ -1036,6 +1115,37 @@
                         당신의 교실에서 시작되는 전문적 성장의 여정<br>
                         교사 연구자로서 당신의 잠재력을 발견하고, 교실의 변화를 주도하는 전문가로 성장하세요.
                     </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 연구대회 모달 -->
+    <div id="researchModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeResearchModal()">&times;</span>
+            <div class="training-intro">
+                <h1>연구대회 수상작</h1>
+                <p style="text-align: center; font-size: 1.2em; color: #666; margin-bottom: 30px;">
+                    역대 연구대회 수상작을 확인하고 다운로드하실 수 있습니다.
+                </p>
+                
+                <div class="award-gallery" style="margin-top: 30px;">
+                    <a href="research-award-2023.html" class="award-card" onclick="closeResearchModal()">
+                        <h3>2023년 수상작</h3>
+                        <p>2023년 연구대회 수상작 자료</p>
+                        <span class="award-badge">수상작</span>
+                    </a>
+                    <a href="research-award-2024.html" class="award-card" onclick="closeResearchModal()">
+                        <h3>2024년 수상작</h3>
+                        <p>2024년 연구대회 수상작 자료</p>
+                        <span class="award-badge">수상작</span>
+                    </a>
+                    <a href="research-award-2025.html" class="award-card" onclick="closeResearchModal()">
+                        <h3>2025년 수상작</h3>
+                        <p>2025년 연구대회 수상작 자료</p>
+                        <span class="award-badge">수상작</span>
+                    </a>
                 </div>
             </div>
         </div>

@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지 - 실습 1 & 2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .admin-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        .image-btn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .admin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .wordcloud-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .wordcloud-section h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .wordcloud-preview {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        #admin-wordcloud-canvas {
+            width: 100%;
+            height: 400px;
+        }
+
+        .word-list-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .word-list-section h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .word-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .word-item:hover {
+            transform: translateX(5px);
+        }
+
+        .word-text {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .word-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .last-update {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab-button {
+            padding: 12px 25px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .wallboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallboard-stat {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .wallboard-stat h4 {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .wallboard-stat .value {
+            color: #667eea;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        @media (max-width: 968px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 홈으로</a>
+        <a href="practice-1.html" class="back-button" style="margin-left: 10px;">실습 1로</a>
+        <a href="practice-2.html" class="back-button" style="margin-left: 10px;">실습 2로</a>
+        
+        <div class="header">
+            <h1>관리자 페이지</h1>
+            <p>실습 1 & 2 통합 관리</p>
+        </div>
+
+        <div class="tab-container">
+            <button class="tab-button active" onclick="switchTab('practice1')">실습 1 - 워드크라우드</button>
+            <button class="tab-button" onclick="switchTab('practice2')">실습 2 - 담벼락</button>
+        </div>
+
+        <!-- 실습 1 탭 -->
+        <div id="practice1-tab" class="tab-content active">
+            <div class="admin-controls">
+                <button class="admin-btn refresh-btn" onclick="refreshData()">🔄 새로고침</button>
+                <button class="admin-btn export-btn" onclick="exportData()">📥 데이터 내보내기</button>
+                <button class="admin-btn image-btn" onclick="downloadWordCloudImage()">🖼️ 워드크라우드 이미지</button>
+                <button class="admin-btn image-btn" onclick="downloadStatsImage()">📊 통계표 이미지</button>
+                <button class="admin-btn clear-btn" onclick="clearData()">🗑️ 데이터 초기화</button>
+            </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>참여자 수</h3>
+                <div class="value" id="adminParticipantCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>총 단어 수</h3>
+                <div class="value" id="adminTotalWords">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>고유 단어</h3>
+                <div class="value" id="adminUniqueWords">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>가장 많이 입력된 단어</h3>
+                <div class="value" id="adminTopWord" style="font-size: 1.5em;">-</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="wordcloud-section">
+                <h2>📊 워드크라우드 시각화</h2>
+                <div class="wordcloud-preview">
+                    <canvas id="admin-wordcloud-canvas"></canvas>
+                    <div id="admin-wordcloud-placeholder" style="position: absolute; color: #999;">
+                        데이터가 없습니다
+                    </div>
+                </div>
+            </div>
+
+            <div class="word-list-section">
+                <h2>📝 단어 목록 (빈도순)</h2>
+                <div id="wordListContainer">
+                    <p style="text-align: center; color: #999; padding: 20px;">단어가 없습니다</p>
+                </div>
+            </div>
+        </div>
+
+            <div class="last-update">
+                마지막 업데이트: <span id="lastUpdateTime">-</span>
+            </div>
+        </div>
+
+        <!-- 실습 2 탭 -->
+        <div id="practice2-tab" class="tab-content">
+            <div class="admin-controls">
+                <button class="admin-btn refresh-btn" onclick="refreshWallboardData()">🔄 새로고침</button>
+                <button class="admin-btn export-btn" onclick="exportWallboardData()">📥 데이터 내보내기</button>
+                <button class="admin-btn image-btn" onclick="downloadWallboardImage()">🖼️ 담벼락 이미지</button>
+                <button class="admin-btn clear-btn" onclick="clearWallboardData()">🗑️ 전체 삭제</button>
+            </div>
+
+            <div class="wallboard-stats">
+                <div class="wallboard-stat">
+                    <h4>카드 수</h4>
+                    <div class="value" id="wallboardNoteCount">0</div>
+                </div>
+                <div class="wallboard-stat">
+                    <h4>참여자 수</h4>
+                    <div class="value" id="wallboardParticipantCount">0</div>
+                </div>
+            </div>
+
+            <div class="word-list-section">
+                <h2>📌 담벼락 카드 목록</h2>
+                <div id="wallboardCardContainer">
+                    <p style="text-align: center; color: #999; padding: 20px;">카드가 없습니다</p>
+                </div>
+            </div>
+
+            <div class="last-update">
+                마지막 업데이트: <span id="wallboardLastUpdateTime">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 세션 확인 (강사 또는 관리자만 접근 가능)
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (session.type !== 'teacher' && session.type !== 'admin') {
+            alert('강사 또는 관리자 권한이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+        
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `class_data_${CLASS_ID}`;
+        const SYNC_INTERVAL = 1000; // 1초마다 새로고침
+
+        // 탭 전환
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'practice1') {
+                document.querySelector('.tab-button:first-child').classList.add('active');
+                document.getElementById('practice1-tab').classList.add('active');
+            } else {
+                document.querySelector('.tab-button:last-child').classList.add('active');
+                document.getElementById('practice2-tab').classList.add('active');
+                refreshWallboardData();
+            }
+        }
+
+        function getClassData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return {
+                practice1: {
+                    words: {},
+                    participants: [],
+                    lastUpdate: Date.now()
+                },
+                practice2: {
+                    notes: [],
+                    participants: [],
+                    lastUpdate: Date.now()
+                }
+            };
+        }
+
+        function loadWordCloudData() {
+            const classData = getClassData();
+            const data = classData.practice1 || {
+                words: {},
+                participants: [],
+                lastUpdate: Date.now()
+            };
+            data.participants = new Set(data.participants || []);
+            return data;
+        }
+
+        function updateWordCloud() {
+            const data = loadWordCloudData();
+            const words = Object.keys(data.words);
+            
+            if (words.length === 0) {
+                document.getElementById('admin-wordcloud-placeholder').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('admin-wordcloud-placeholder').style.display = 'none';
+            
+            // WordCloud2.js 형식으로 변환
+            const wordList = Object.entries(data.words).map(([word, count]) => [word, count * 10]);
+            
+            // 캔버스 초기화
+            const canvas = document.getElementById('admin-wordcloud-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 워드크라우드 생성
+            WordCloud(canvas, {
+                list: wordList,
+                gridSize: 8,
+                weightFactor: function (size) {
+                    return Math.pow(size, 0.6) * 10;
+                },
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: function() {
+                    const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0'];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                },
+                rotateRatio: 0.3,
+                rotationSteps: 2,
+                backgroundColor: 'transparent',
+                minSize: 10
+            });
+        }
+
+        function updateStats() {
+            const data = loadWordCloudData();
+            const totalWords = Object.values(data.words).reduce((sum, count) => sum + count, 0);
+            const uniqueWords = Object.keys(data.words).length;
+            
+            // 가장 많이 입력된 단어 찾기
+            let topWord = '-';
+            let topCount = 0;
+            Object.entries(data.words).forEach(([word, count]) => {
+                if (count > topCount) {
+                    topCount = count;
+                    topWord = word;
+                }
+            });
+            
+            document.getElementById('adminParticipantCount').textContent = data.participants.size;
+            document.getElementById('adminTotalWords').textContent = totalWords;
+            document.getElementById('adminUniqueWords').textContent = uniqueWords;
+            document.getElementById('adminTopWord').textContent = topWord;
+            
+            // 마지막 업데이트 시간
+            const updateTime = new Date(data.lastUpdate);
+            document.getElementById('lastUpdateTime').textContent = 
+                updateTime.toLocaleString('ko-KR', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+        }
+
+        function updateWordList() {
+            const data = loadWordCloudData();
+            const words = Object.entries(data.words);
+            
+            if (words.length === 0) {
+                document.getElementById('wordListContainer').innerHTML = 
+                    '<p style="text-align: center; color: #999; padding: 20px;">단어가 없습니다</p>';
+                return;
+            }
+            
+            // 빈도순으로 정렬
+            words.sort((a, b) => b[1] - a[1]);
+            
+            const container = document.getElementById('wordListContainer');
+            container.innerHTML = words.map(([word, count]) => `
+                <div class="word-item">
+                    <span class="word-text">${word}</span>
+                    <span class="word-count">${count}회</span>
+                </div>
+            `).join('');
+        }
+
+        function refreshData() {
+            updateWordCloud();
+            updateStats();
+            updateWordList();
+        }
+
+        function exportData() {
+            const data = loadWordCloudData();
+            const exportData = {
+                words: data.words,
+                participants: Array.from(data.participants),
+                totalWords: Object.values(data.words).reduce((sum, count) => sum + count, 0),
+                uniqueWords: Object.keys(data.words).length,
+                lastUpdate: new Date(data.lastUpdate).toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wordcloud_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('데이터가 내보내졌습니다!');
+        }
+
+        function clearData() {
+            if (confirm('정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                const classData = getClassData();
+                classData.practice1 = {
+                    words: {},
+                    participants: [],
+                    lastUpdate: Date.now()
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                alert('데이터가 초기화되었습니다.');
+                refreshData();
+            }
+        }
+
+        // 초기화 및 주기적 업데이트
+        window.addEventListener('load', function() {
+            refreshData();
+            
+            // 주기적으로 새로고침
+            setInterval(refreshData, SYNC_INTERVAL);
+            
+            // 다른 탭에서의 변경사항 감지
+            window.addEventListener('storage', function(e) {
+                if (e.key === STORAGE_KEY) {
+                    refreshData();
+                }
+            });
+        });
+
+        // 캔버스 크기 조정
+        function resizeCanvas() {
+            const canvas = document.getElementById('admin-wordcloud-canvas');
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 40;
+            canvas.height = 400;
+            updateWordCloud();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas);
+
+        // 워드크라우드 이미지 다운로드
+        function downloadWordCloudImage() {
+            const canvas = document.getElementById('admin-wordcloud-canvas');
+            if (!canvas) {
+                alert('워드크라우드가 없습니다.');
+                return;
+            }
+            
+            const data = loadWordCloudData();
+            if (Object.keys(data.words || {}).length === 0) {
+                alert('다운로드할 워드크라우드가 없습니다.');
+                return;
+            }
+            
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+                const className = session.className || session.classId || 'wordcloud';
+                a.download = `wordcloud_${className}_${new Date().toISOString().split('T')[0]}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // 통계표 이미지 다운로드
+        async function downloadStatsImage() {
+            const data = loadWordCloudData();
+            const statsDiv = document.createElement('div');
+            statsDiv.style.cssText = 'background: white; padding: 30px; font-family: Arial; width: 800px;';
+            
+            const totalWords = Object.values(data.words || {}).reduce((sum, count) => sum + count, 0);
+            const uniqueWords = Object.keys(data.words || {}).length;
+            
+            let topWord = '-';
+            let topCount = 0;
+            Object.entries(data.words || {}).forEach(([word, count]) => {
+                if (count > topCount) {
+                    topCount = count;
+                    topWord = word;
+                }
+            });
+            
+            statsDiv.innerHTML = `
+                <h1 style="color: #667eea; margin-bottom: 20px;">실습 1 - 워드크라우드 통계</h1>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <tr style="background: #667eea; color: white;">
+                        <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">항목</th>
+                        <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">값</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; border: 1px solid #ddd;">참여자 수</td>
+                        <td style="padding: 15px; border: 1px solid #ddd;">${data.participants.size || 0}명</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; border: 1px solid #ddd;">총 단어 수</td>
+                        <td style="padding: 15px; border: 1px solid #ddd;">${totalWords}개</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; border: 1px solid #ddd;">고유 단어</td>
+                        <td style="padding: 15px; border: 1px solid #ddd;">${uniqueWords}개</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 15px; border: 1px solid #ddd;">가장 많이 입력된 단어</td>
+                        <td style="padding: 15px; border: 1px solid #ddd;">${topWord} (${topCount}회)</td>
+                    </tr>
+                </table>
+                <h2 style="color: #764ba2; margin-top: 30px; margin-bottom: 15px;">단어 목록 (상위 10개)</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="background: #764ba2; color: white;">
+                        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">순위</th>
+                        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">단어</th>
+                        <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">빈도</th>
+                    </tr>
+                    ${Object.entries(data.words || {})
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .map(([word, count], index) => `
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${word}</td>
+                                <td style="padding: 10px; border: 1px solid #ddd;">${count}회</td>
+                            </tr>
+                        `).join('')}
+                </table>
+            `;
+            
+            document.body.appendChild(statsDiv);
+            
+            try {
+                const canvas = await html2canvas(statsDiv, { backgroundColor: '#ffffff' });
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+                    const className = session.className || session.classId || 'stats';
+                    a.download = `stats_${className}_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    document.body.removeChild(statsDiv);
+                });
+            } catch (error) {
+                document.body.removeChild(statsDiv);
+                console.error('이미지 생성 오류:', error);
+                alert('이미지 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 실습 2 담벼락 관리 함수들
+        function loadWallboardData() {
+            const classData = getClassData();
+            const data = classData.practice2 || {
+                notes: [],
+                participants: [],
+                lastUpdate: Date.now()
+            };
+            data.participants = new Set(data.participants || []);
+            return data;
+        }
+
+        function refreshWallboardData() {
+            const data = loadWallboardData();
+            
+            document.getElementById('wallboardNoteCount').textContent = data.notes.length;
+            document.getElementById('wallboardParticipantCount').textContent = data.participants.size;
+            
+            const updateTime = new Date(data.lastUpdate);
+            document.getElementById('wallboardLastUpdateTime').textContent = 
+                updateTime.toLocaleString('ko-KR', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+
+            // 카드 목록 표시
+            const container = document.getElementById('wallboardCardContainer');
+            if (data.notes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">카드가 없습니다</p>';
+                return;
+            }
+
+            // 최신순으로 정렬
+            const sortedNotes = [...data.notes].sort((a, b) => b.timestamp - a.timestamp);
+            
+            container.innerHTML = sortedNotes.map((note, index) => {
+                const noteDate = new Date(note.timestamp);
+                return `
+                    <div class="word-item" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                            <span class="word-text">카드 #${index + 1}</span>
+                            <span style="color: #999; font-size: 0.9em;">${noteDate.toLocaleString('ko-KR')}</span>
+                        </div>
+                        <div style="background: ${note.color}; padding: 15px; border-radius: 10px; width: 100%; margin-top: 10px;">
+                            <div style="color: #333;">${note.content.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportWallboardData() {
+            const data = loadWallboardData();
+            const exportData = {
+                notes: data.notes,
+                participants: Array.from(data.participants),
+                totalNotes: data.notes.length,
+                lastUpdate: new Date(data.lastUpdate).toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wallboard_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('데이터가 내보내졌습니다!');
+        }
+
+        function clearWallboardData() {
+            if (confirm('정말로 실습 2 담벼락의 모든 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                const classData = getClassData();
+                classData.practice2 = {
+                    notes: [],
+                    participants: [],
+                    lastUpdate: Date.now()
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                alert('담벼락 데이터가 초기화되었습니다.');
+                refreshWallboardData();
+            }
+        }
+
+        // 실습 2 데이터도 주기적으로 새로고침
+        setInterval(function() {
+            if (document.getElementById('practice2-tab').classList.contains('active')) {
+                refreshWallboardData();
+            }
+        }, SYNC_INTERVAL);
+
+        // 다른 탭에서의 변경사항 감지 (실습 2)
+        window.addEventListener('storage', function(e) {
+            if (e.key === STORAGE_KEY) {
+                refreshWallboardData();
+            }
+        });
+
+        // 담벼락 이미지 다운로드
+        async function downloadWallboardImage() {
+            const data = loadWallboardData();
+            if (data.notes.length === 0) {
+                alert('다운로드할 담벼락 데이터가 없습니다.');
+                return;
+            }
+            
+            const wallboardDiv = document.createElement('div');
+            wallboardDiv.style.cssText = 'background: #f5f5f5; padding: 30px; font-family: Arial; width: 1200px; min-height: 800px;';
+            
+            wallboardDiv.innerHTML = `
+                <h1 style="color: #667eea; margin-bottom: 20px;">실습 2 - 담벼락</h1>
+                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <p><strong>카드 수:</strong> ${data.notes.length}개</p>
+                    <p><strong>참여자 수:</strong> ${data.participants.size || 0}명</p>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                    ${data.notes.map((note, index) => `
+                        <div style="background: ${note.color || '#fff3cd'}; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            <div style="font-weight: bold; margin-bottom: 10px; color: #333;">카드 #${index + 1}</div>
+                            <div style="color: #333; word-wrap: break-word;">${note.content.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.body.appendChild(wallboardDiv);
+            
+            try {
+                const canvas = await html2canvas(wallboardDiv, { 
+                    backgroundColor: '#f5f5f5',
+                    scale: 1,
+                    logging: false
+                });
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+                    const className = session.className || session.classId || 'wallboard';
+                    a.download = `wallboard_${className}_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    document.body.removeChild(wallboardDiv);
+                });
+            } catch (error) {
+                document.body.removeChild(wallboardDiv);
+                console.error('이미지 생성 오류:', error);
+                alert('이미지 생성 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>
+

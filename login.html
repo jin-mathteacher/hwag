@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 교원의 현장 연구 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .user-type-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            margin-top: 10px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .link-section {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .link-section a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .link-section a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>교원의 현장 연구 2026</h1>
+            <p>T.O.U.C.H 교사단 3기 연수</p>
+        </div>
+
+        <div class="user-type-selector">
+            <button class="user-type-btn active" onclick="selectUserType('teacher')">강사</button>
+            <button class="user-type-btn" onclick="selectUserType('admin')">총 관리자</button>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">사용자명</label>
+                <input type="text" id="username" required placeholder="사용자명을 입력하세요">
+            </div>
+
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" required placeholder="비밀번호를 입력하세요">
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <button type="submit" class="login-button">로그인</button>
+        </form>
+
+        <div class="link-section">
+            <a href="student-login.html">수강생 로그인</a>
+        </div>
+    </div>
+
+    <script>
+        let currentUserType = 'teacher';
+        const ADMIN_USERNAME = 'admin';
+        const ADMIN_PASSWORD = 'admin123';
+
+        // 강사 계정 저장 (간단한 데모용)
+        function getTeachers() {
+            const saved = localStorage.getItem('teachers');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveTeachers(teachers) {
+            localStorage.setItem('teachers', JSON.stringify(teachers));
+        }
+
+        function selectUserType(type) {
+            currentUserType = type;
+            document.querySelectorAll('.user-type-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMessage');
+            
+            errorMsg.style.display = 'none';
+            
+            if (currentUserType === 'admin') {
+                if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                    const session = {
+                        type: 'admin',
+                        username: username,
+                        loginTime: Date.now()
+                    };
+                    sessionStorage.setItem('userSession', JSON.stringify(session));
+                    window.location.href = 'admin-dashboard.html';
+                    return;
+                } else {
+                    errorMsg.textContent = '사용자명 또는 비밀번호가 올바르지 않습니다.';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+            }
+            
+            // 강사 로그인
+            const teachers = getTeachers();
+            const teacher = teachers.find(t => t.username === username);
+            
+            if (!teacher) {
+                // 새 강사 등록
+                if (confirm('등록되지 않은 사용자입니다. 새 강사로 등록하시겠습니까?')) {
+                    const newTeacher = {
+                        username: username,
+                        password: password, // 실제로는 암호화 필요
+                        createdAt: Date.now()
+                    };
+                    teachers.push(newTeacher);
+                    saveTeachers(teachers);
+                    
+                    const session = {
+                        type: 'teacher',
+                        username: username,
+                        loginTime: Date.now()
+                    };
+                    sessionStorage.setItem('userSession', JSON.stringify(session));
+                    window.location.href = 'teacher-dashboard.html';
+                    return;
+                }
+            } else {
+                // 기존 강사 로그인
+                if (teacher.password === password) {
+                    const session = {
+                        type: 'teacher',
+                        username: username,
+                        loginTime: Date.now()
+                    };
+                    sessionStorage.setItem('userSession', JSON.stringify(session));
+                    window.location.href = 'teacher-dashboard.html';
+                    return;
+                } else {
+                    errorMsg.textContent = '비밀번호가 올바르지 않습니다.';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

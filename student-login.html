@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수강생 로그인 - 교원의 현장 연구 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            margin-top: 10px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .success-message {
+            color: #43e97b;
+            margin-top: 10px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .link-section {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .link-section a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .link-section a:hover {
+            text-decoration: underline;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .info-box p {
+            color: #1976d2;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>수강생 로그인</h1>
+            <p>교원의 현장 연구 2026</p>
+        </div>
+
+        <div class="info-box">
+            <p><strong>안내:</strong> 강사로부터 받은 클래스 등록 코드를 입력하세요.</p>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="studentName">이름</label>
+                <input type="text" id="studentName" required placeholder="이름을 입력하세요">
+            </div>
+
+            <div class="form-group">
+                <label for="classCode">클래스 등록 코드</label>
+                <input type="text" id="classCode" required placeholder="강사로부터 받은 코드를 입력하세요" style="text-transform: uppercase;">
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <button type="submit" class="login-button">로그인</button>
+        </form>
+
+        <div class="link-section">
+            <a href="login.html">강사/관리자 로그인</a>
+        </div>
+    </div>
+
+    <script>
+        function findClassByCode(code) {
+            const keys = Object.keys(localStorage);
+            for (let key of keys) {
+                if (key.startsWith('teacher_classes_')) {
+                    const classes = JSON.parse(localStorage.getItem(key) || '[]');
+                    const found = classes.find(c => c.code === code.toUpperCase());
+                    if (found) {
+                        return {
+                            class: found,
+                            teacherUsername: key.replace('teacher_classes_', '')
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function isStudentRegistered(classId, studentName) {
+            const keys = Object.keys(localStorage);
+            for (let key of keys) {
+                if (key.startsWith('teacher_classes_')) {
+                    const classes = JSON.parse(localStorage.getItem(key) || '[]');
+                    const cls = classes.find(c => c.id === classId);
+                    if (cls && cls.students) {
+                        return cls.students.some(s => s.name === studentName);
+                    }
+                }
+            }
+            return false;
+        }
+
+        function registerStudent(classId, studentName, teacherUsername) {
+            const key = `teacher_classes_${teacherUsername}`;
+            const classes = JSON.parse(localStorage.getItem(key) || '[]');
+            const cls = classes.find(c => c.id === classId);
+            
+            if (!cls.students) {
+                cls.students = [];
+            }
+            
+            // 중복 확인
+            if (!cls.students.some(s => s.name === studentName)) {
+                cls.students.push({
+                    name: studentName,
+                    registeredAt: Date.now()
+                });
+                localStorage.setItem(key, JSON.stringify(classes));
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const studentName = document.getElementById('studentName').value.trim();
+            const classCode = document.getElementById('classCode').value.trim().toUpperCase();
+            const errorMsg = document.getElementById('errorMessage');
+            const successMsg = document.getElementById('successMessage');
+            
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            if (!studentName) {
+                errorMsg.textContent = '이름을 입력해주세요.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            if (!classCode) {
+                errorMsg.textContent = '클래스 등록 코드를 입력해주세요.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // 클래스 찾기
+            const result = findClassByCode(classCode);
+            if (!result) {
+                errorMsg.textContent = '올바르지 않은 등록 코드입니다.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // 수강생 등록 확인 및 등록
+            const isRegistered = isStudentRegistered(result.class.id, studentName);
+            if (!isRegistered) {
+                registerStudent(result.class.id, studentName, result.teacherUsername);
+                successMsg.textContent = '수강생으로 등록되었습니다.';
+                successMsg.style.display = 'block';
+            }
+            
+            // 세션 저장
+            const session = {
+                type: 'student',
+                name: studentName,
+                classId: result.class.id,
+                className: result.class.name,
+                teacherUsername: result.teacherUsername,
+                loginTime: Date.now()
+            };
+            sessionStorage.setItem('userSession', JSON.stringify(session));
+            
+            // 메인 페이지로 이동
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
+
+
+

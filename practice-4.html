@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실습 4 - 교육현안 실습하기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .menu-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .menu-item h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .menu-item p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .content-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .iframe-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 200px);
+            min-height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 담벼락 스타일 (교육 현황 공유하기) */
+        .wallboard-section {
+            margin-top: 20px;
+        }
+
+        .wallboard-container {
+            position: relative;
+            width: 100%;
+            min-height: 600px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .paste-area {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .paste-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+
+        .paste-input:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.2s ease;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            transform: scale(1.15);
+        }
+
+        .paste-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .paste-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .note {
+            position: absolute;
+            min-width: 200px;
+            max-width: 300px;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            cursor: move;
+            word-wrap: break-word;
+            z-index: 10;
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .note-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .note-delete {
+            background: rgba(255,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 1;
+            transition: background 0.2s ease;
+        }
+
+        .note-delete:hover {
+            background: rgba(255,0,0,1);
+        }
+
+        .note-content {
+            color: #333;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .note-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stats p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .close-button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 1em;
+            transition: background 0.3s ease;
+        }
+
+        .close-button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 돌아가기</a>
+        
+        <div class="header">
+            <h1>실습 4 - 교육현안 실습하기</h1>
+        </div>
+
+        <div class="menu-container" id="menuContainer">
+            <div class="menu-item" onclick="openInNewWindow('https://trends.google.co.kr/trends/')">
+                <h2>1. 교육 트랜드 파악하기</h2>
+                <p>Google Trends를 활용하여 교육 트랜드를 분석합니다</p>
+            </div>
+            <div class="menu-item" onclick="openInNewWindow('https://notebooklm.google.com/')">
+                <h2>2. 교육문제 도출하기</h2>
+                <p>Google NotebookLM을 활용하여 교육 문제를 도출합니다</p>
+            </div>
+            <div class="menu-item" onclick="showContent(3)">
+                <h2>3. 교육 현황 공유하기</h2>
+                <p>담벼락을 통해 교육 현황을 자유롭게 공유합니다</p>
+            </div>
+        </div>
+
+        <!-- 교육 현황 공유하기 (담벼락) -->
+        <div class="content-section" id="content3">
+            <button class="close-button" onclick="showMenu()">← 메뉴로 돌아가기</button>
+            <div class="wallboard-section">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📌 교육 현황 공유 담벼락</h2>
+                
+                <div class="stats" id="stats">
+                    <p><strong>총 메모:</strong> <span id="noteCount">0</span>개</p>
+                    <p><strong>참여자:</strong> <span id="participantCount">0</span>명</p>
+                </div>
+
+                <div class="paste-area">
+                    <textarea 
+                        class="paste-input" 
+                        id="pasteInput" 
+                        placeholder="텍스트나 이미지를 붙여넣으세요. 이미지는 Ctrl+V로 붙여넣을 수 있습니다."
+                    ></textarea>
+                    
+                    <div class="color-picker">
+                        <span style="color: #333; font-weight: bold; margin-right: 10px;">카드 색상:</span>
+                        <div class="color-option selected" data-color="#fff3cd" style="background: #fff3cd;" onclick="selectColor('#fff3cd')"></div>
+                        <div class="color-option" data-color="#d1ecf1" style="background: #d1ecf1;" onclick="selectColor('#d1ecf1')"></div>
+                        <div class="color-option" data-color="#d4edda" style="background: #d4edda;" onclick="selectColor('#d4edda')"></div>
+                        <div class="color-option" data-color="#f8d7da" style="background: #f8d7da;" onclick="selectColor('#f8d7da')"></div>
+                        <div class="color-option" data-color="#e2e3e5" style="background: #e2e3e5;" onclick="selectColor('#e2e3e5')"></div>
+                        <div class="color-option" data-color="#fff" style="background: #fff;" onclick="selectColor('#fff')"></div>
+                    </div>
+                    
+                    <button class="paste-button" onclick="addNote()">메모 추가하기</button>
+                </div>
+
+                <div class="wallboard-container" id="wallboard">
+                    <!-- 메모들이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#fff3cd';
+        let notes = [];
+        let isDragging = false;
+        let currentNote = null;
+        let offset = { x: 0, y: 0 };
+
+        // 세션 정보 가져오기
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `wallboard_practice4_${CLASS_ID}`;
+
+        // 로드 시 데이터 불러오기
+        loadWallboardData();
+
+        // 새창으로 열기 함수
+        function openInNewWindow(url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        function showContent(num) {
+            document.getElementById('menuContainer').style.display = 'none';
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(`content${num}`).classList.add('active');
+            
+            // 담벼락인 경우 데이터 렌더링
+            if (num === 3) {
+                renderNotes();
+                updateStats();
+            }
+        }
+
+        function showMenu() {
+            document.getElementById('menuContainer').style.display = 'grid';
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+        }
+
+        function loadWallboardData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const parsed = JSON.parse(data);
+                notes = parsed.notes || [];
+            }
+        }
+
+        function saveWallboardData() {
+            const data = {
+                notes: notes,
+                lastUpdate: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function addNote() {
+            const input = document.getElementById('pasteInput');
+            const content = input.value.trim();
+            
+            if (!content) {
+                alert('내용을 입력해주세요.');
+                return;
+            }
+
+            const note = {
+                id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                content: content,
+                color: selectedColor,
+                x: Math.random() * (window.innerWidth - 400) + 50,
+                y: Math.random() * 300 + 100,
+                userId: session.id || 'anonymous',
+                timestamp: Date.now()
+            };
+
+            notes.push(note);
+            saveWallboardData();
+            renderNotes();
+            updateStats();
+            
+            input.value = '';
+        }
+
+        function renderNotes() {
+            const wallboard = document.getElementById('wallboard');
+            wallboard.innerHTML = '';
+            
+            notes.forEach(note => {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note';
+                noteDiv.id = note.id;
+                noteDiv.style.left = note.x + 'px';
+                noteDiv.style.top = note.y + 'px';
+                noteDiv.style.backgroundColor = note.color;
+                
+                // 이미지 처리
+                let content = note.content;
+                const imgRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+                content = content.replace(imgRegex, '<img src="$1" alt="이미지">');
+                
+                noteDiv.innerHTML = `
+                    <div class="note-header">
+                        <span class="note-color" style="background: ${note.color};"></span>
+                        <button class="note-delete" onclick="deleteNote('${note.id}')" title="삭제">×</button>
+                    </div>
+                    <div class="note-content">${content.replace(/\n/g, '<br>')}</div>
+                `;
+                
+                // 드래그 이벤트
+                noteDiv.addEventListener('mousedown', startDrag);
+                
+                wallboard.appendChild(noteDiv);
+            });
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('note-delete')) return;
+            
+            isDragging = true;
+            currentNote = e.currentTarget;
+            const rect = currentNote.getBoundingClientRect();
+            const wallboard = document.getElementById('wallboard');
+            const wallboardRect = wallboard.getBoundingClientRect();
+            
+            offset.x = e.clientX - rect.left;
+            offset.y = e.clientY - rect.top;
+            
+            currentNote.style.zIndex = 1000;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging || !currentNote) return;
+            
+            const wallboard = document.getElementById('wallboard');
+            const wallboardRect = wallboard.getBoundingClientRect();
+            
+            let x = e.clientX - wallboardRect.left - offset.x;
+            let y = e.clientY - wallboardRect.top - offset.y;
+            
+            // 경계 체크
+            x = Math.max(0, Math.min(x, wallboardRect.width - currentNote.offsetWidth));
+            y = Math.max(0, Math.min(y, wallboardRect.height - currentNote.offsetHeight));
+            
+            currentNote.style.left = x + 'px';
+            currentNote.style.top = y + 'px';
+        }
+
+        function stopDrag() {
+            if (currentNote) {
+                const noteId = currentNote.id;
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    const wallboard = document.getElementById('wallboard');
+                    const wallboardRect = wallboard.getBoundingClientRect();
+                    const noteRect = currentNote.getBoundingClientRect();
+                    
+                    note.x = noteRect.left - wallboardRect.left;
+                    note.y = noteRect.top - wallboardRect.top;
+                    saveWallboardData();
+                }
+                currentNote.style.zIndex = 10;
+            }
+            
+            isDragging = false;
+            currentNote = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function deleteNote(noteId) {
+            if (!confirm('이 메모를 삭제하시겠습니까?')) return;
+            
+            notes = notes.filter(note => note.id !== noteId);
+            saveWallboardData();
+            renderNotes();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('noteCount').textContent = notes.length;
+            
+            // 참여자 수 계산
+            const participants = new Set(notes.map(note => note.userId));
+            document.getElementById('participantCount').textContent = participants.size;
+        }
+
+        // 이미지 붙여넣기 처리
+        document.getElementById('pasteInput').addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const imgUrl = event.target.result;
+                        const input = document.getElementById('pasteInput');
+                        input.value = imgUrl + '\n' + input.value;
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // 초기 렌더링
+        renderNotes();
+        updateStats();
+    </script>
+</body>
+</html>

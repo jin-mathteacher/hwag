@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실습 1 - 워드크라우드</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .practice-content {
+            margin-top: 30px;
+        }
+
+        .practice-section {
+            background: #f8f9fa;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .practice-section h2 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .practice-section p {
+            color: #555;
+            margin: 10px 0;
+            line-height: 1.8;
+        }
+
+        .practice-section ul {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        .practice-section li {
+            margin: 8px 0;
+            color: #555;
+        }
+
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-weight: bold;
+        }
+
+        .link-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .wordcloud-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 15px;
+            color: white;
+        }
+
+        .wordcloud-section h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .wordcloud-input-area {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .wordcloud-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .wordcloud-submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .wordcloud-submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .wordcloud-preview {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #wordcloud-canvas {
+            width: 100%;
+            height: 300px;
+        }
+
+        .wordcloud-stats {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .wordcloud-stats span {
+            margin: 0 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 돌아가기</a>
+        
+        <div class="header">
+            <h1>실습 1</h1>
+            <p>워드크라우드 실습</p>
+        </div>
+
+        <div class="practice-content">
+            <div class="wordcloud-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">☁️ 워드크라우드 실습</h2>
+                    <a href="wordcloud-admin.html" class="link-button" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white;">관리자 페이지</a>
+                </div>
+                
+                <div style="background: rgba(0, 191, 255, 0.9); padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    <p style="font-size: 1.3em; font-weight: bold; color: #000; margin: 0; line-height: 1.6;">
+                        선생님들은 <strong style="color: #fff; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 5px;">[연구대회]</strong>라는 말을 들으면 어떤 단어가 떠오르시나요?<br>
+                        <span style="font-size: 1.1em; color: #000;">3개씩만 입력해주세요!</span>
+                    </p>
+                </div>
+                
+                <p style="margin-bottom: 20px; font-size: 1.1em; opacity: 0.9;">연구 주제나 키워드를 입력하면 실시간으로 워드크라우드가 생성됩니다. 여러분의 의견을 공유해주세요!</p>
+                
+                <div class="wordcloud-input-area">
+                    <input 
+                        type="text" 
+                        id="wordInput" 
+                        class="wordcloud-input" 
+                        placeholder="키워드나 단어를 입력하세요 (예: 교육, 연구, 학습, 학생 등)"
+                        maxlength="50"
+                    >
+                    <button class="wordcloud-submit-btn" onclick="addWord()">단어 추가</button>
+                </div>
+
+                <div class="wordcloud-stats">
+                    <span>참여자 수: <span id="participantCount">0</span>명</span>
+                    <span>총 단어 수: <span id="totalWords">0</span>개</span>
+                    <span>고유 단어: <span id="uniqueWords">0</span>개</span>
+                </div>
+
+                <div class="wordcloud-preview">
+                    <canvas id="wordcloud-canvas"></canvas>
+                    <div id="wordcloud-placeholder" style="position: absolute; color: #999;">
+                        단어를 입력하면 워드크라우드가 표시됩니다
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 세션 확인 및 클래스 ID 가져오기
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (!session.classId && session.type !== 'admin' && session.type !== 'student') {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+        
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `class_data_${CLASS_ID}`;
+        const USER_ID_KEY = `user_id_${CLASS_ID}`;
+        const SYNC_INTERVAL = 2000; // 2초마다 동기화
+
+        // 사용자 ID 생성 (없으면 생성)
+        let userId = localStorage.getItem(USER_ID_KEY);
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem(USER_ID_KEY, userId);
+        }
+
+        // 워드크라우드 데이터 구조 (클래스별 분리)
+        function getClassData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return {
+                practice1: {
+                    words: {},
+                    participants: [],
+                    lastUpdate: Date.now()
+                },
+                practice2: {
+                    notes: [],
+                    participants: [],
+                    lastUpdate: Date.now()
+                }
+            };
+        }
+
+        function saveClassData(classData) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+        }
+
+        function getWordCloudData() {
+            const classData = getClassData();
+            return classData.practice1 || {
+                words: {},
+                participants: [],
+                lastUpdate: Date.now()
+            };
+        }
+
+        function saveWordCloudData(data) {
+            const classData = getClassData();
+            classData.practice1 = {
+                words: data.words,
+                participants: Array.from(data.participants),
+                lastUpdate: data.lastUpdate
+            };
+            saveClassData(classData);
+        }
+
+        function loadWordCloudData() {
+            const data = getWordCloudData();
+            // 배열을 Set으로 변환
+            data.participants = new Set(data.participants || []);
+            return data;
+        }
+
+        // 단어 추가 함수
+        function addWord() {
+            const input = document.getElementById('wordInput');
+            const word = input.value.trim().toLowerCase();
+            
+            if (!word) {
+                alert('단어를 입력해주세요.');
+                return;
+            }
+
+            if (word.length > 50) {
+                alert('단어는 50자 이하로 입력해주세요.');
+                return;
+            }
+
+            // 데이터 가져오기
+            let data = loadWordCloudData();
+            
+            // 참여자 추가
+            data.participants.add(userId);
+            
+            // 단어 추가 또는 카운트 증가
+            if (data.words[word]) {
+                data.words[word]++;
+            } else {
+                data.words[word] = 1;
+            }
+            
+            data.lastUpdate = Date.now();
+            
+            // 저장
+            const dataToSave = {
+                words: data.words,
+                participants: Array.from(data.participants),
+                lastUpdate: data.lastUpdate
+            };
+            saveWordCloudData(dataToSave);
+            
+            // 입력 필드 초기화
+            input.value = '';
+            
+            // 워드크라우드 업데이트
+            updateWordCloud();
+            
+            // 통계 업데이트
+            updateStats();
+        }
+
+        // 워드크라우드 업데이트
+        function updateWordCloud() {
+            const data = loadWordCloudData();
+            const words = Object.keys(data.words);
+            
+            if (words.length === 0) {
+                document.getElementById('wordcloud-placeholder').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('wordcloud-placeholder').style.display = 'none';
+            
+            // WordCloud2.js 형식으로 변환
+            const wordList = Object.entries(data.words).map(([word, count]) => [word, count * 10]);
+            
+            // 캔버스 초기화
+            const canvas = document.getElementById('wordcloud-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 워드크라우드 생성
+            WordCloud(canvas, {
+                list: wordList,
+                gridSize: 8,
+                weightFactor: function (size) {
+                    return Math.pow(size, 0.6) * 8;
+                },
+                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                color: function() {
+                    const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0'];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                },
+                rotateRatio: 0.3,
+                rotationSteps: 2,
+                backgroundColor: 'transparent',
+                minSize: 8
+            });
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            const data = loadWordCloudData();
+            const totalWords = Object.values(data.words).reduce((sum, count) => sum + count, 0);
+            const uniqueWords = Object.keys(data.words).length;
+            
+            document.getElementById('participantCount').textContent = data.participants.size;
+            document.getElementById('totalWords').textContent = totalWords;
+            document.getElementById('uniqueWords').textContent = uniqueWords;
+        }
+
+        // 주기적 동기화 (다른 사용자의 입력 반영)
+        function syncData() {
+            // 실제 서버가 있다면 여기서 서버와 동기화
+            // 현재는 로컬스토리지 기반이므로 자동으로 공유됨
+            updateWordCloud();
+            updateStats();
+        }
+
+        // Enter 키로도 추가 가능
+        document.getElementById('wordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addWord();
+            }
+        });
+
+        // 초기화 및 주기적 업데이트
+        window.addEventListener('load', function() {
+            updateWordCloud();
+            updateStats();
+            
+            // 주기적으로 동기화
+            setInterval(syncData, SYNC_INTERVAL);
+            
+            // 다른 탭에서의 변경사항 감지
+            window.addEventListener('storage', function(e) {
+                if (e.key === STORAGE_KEY) {
+                    updateWordCloud();
+                    updateStats();
+                }
+            });
+        });
+
+        // 캔버스 크기 조정
+        function resizeCanvas() {
+            const canvas = document.getElementById('wordcloud-canvas');
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 40;
+            canvas.height = 300;
+            updateWordCloud();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas);
+    </script>
+</body>
+</html>
+

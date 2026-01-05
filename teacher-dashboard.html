@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>강사 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .class-section {
+            margin-top: 30px;
+        }
+
+        .class-section h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .class-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .class-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .class-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .class-card p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .class-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .class-stats span {
+            color: #999;
+        }
+
+        .class-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-success {
+            background: #43e97b;
+            color: white;
+        }
+
+        .add-class-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .add-class-btn:hover {
+            transform: translateY(-3px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>강사 대시보드</h1>
+            <div>
+                <span style="color: #666; margin-right: 15px;">안녕하세요, <strong id="teacherName"></strong>님</span>
+                <a href="login.html" class="logout-btn" onclick="logout()">로그아웃</a>
+            </div>
+        </div>
+
+        <div class="class-section">
+            <h2>내 클래스 관리</h2>
+            <button class="add-class-btn" onclick="showAddClassModal()">+ 새 클래스 생성</button>
+            
+            <div class="class-grid" id="classGrid">
+                <p style="text-align: center; color: #999; padding: 20px; grid-column: 1 / -1;">클래스가 없습니다. 새 클래스를 생성해주세요.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 클래스 추가 모달 -->
+    <div id="addClassModal" class="modal">
+        <div class="modal-content">
+            <h2>새 클래스 생성</h2>
+            <div class="form-group">
+                <label>클래스 이름 *</label>
+                <input type="text" id="newClassName" placeholder="예: 2026년 1기" required>
+            </div>
+            <div class="form-group">
+                <label>설명 (선택)</label>
+                <textarea id="newClassDescription" rows="3" placeholder="클래스에 대한 설명을 입력하세요"></textarea>
+            </div>
+            <div class="form-group">
+                <label>수강생 등록 코드 (자동 생성)</label>
+                <input type="text" id="classCode" readonly style="background: #f5f5f5;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="addNewClass()">생성</button>
+                <button class="btn btn-danger" onclick="closeAddClassModal()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 세션 확인
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (session.type !== 'teacher') {
+            alert('강사 권한이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+
+        const username = session.username;
+        document.getElementById('teacherName').textContent = username;
+
+        function getTeacherClasses() {
+            const key = `teacher_classes_${username}`;
+            const saved = localStorage.getItem(key);
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveTeacherClasses(classes) {
+            const key = `teacher_classes_${username}`;
+            localStorage.setItem(key, JSON.stringify(classes));
+        }
+
+        function generateClassCode() {
+            return 'CLASS_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substr(2, 5).toUpperCase();
+        }
+
+        function showAddClassModal() {
+            document.getElementById('addClassModal').style.display = 'flex';
+            document.getElementById('classCode').value = generateClassCode();
+        }
+
+        function closeAddClassModal() {
+            document.getElementById('addClassModal').style.display = 'none';
+            document.getElementById('newClassName').value = '';
+            document.getElementById('newClassDescription').value = '';
+        }
+
+        function addNewClass() {
+            const name = document.getElementById('newClassName').value.trim();
+            if (!name) {
+                alert('클래스 이름을 입력해주세요.');
+                return;
+            }
+            
+            const classes = getTeacherClasses();
+            const classCode = document.getElementById('classCode').value;
+            
+            const newClass = {
+                id: 'class_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                description: document.getElementById('newClassDescription').value.trim(),
+                code: classCode,
+                createdAt: Date.now(),
+                students: []
+            };
+            
+            classes.push(newClass);
+            saveTeacherClasses(classes);
+            
+            // 클래스 데이터 초기화
+            const classData = {
+                practice1: {
+                    words: {},
+                    participants: [],
+                    lastUpdate: Date.now()
+                },
+                practice2: {
+                    notes: [],
+                    participants: [],
+                    lastUpdate: Date.now()
+                }
+            };
+            localStorage.setItem(`class_data_${newClass.id}`, JSON.stringify(classData));
+            
+            closeAddClassModal();
+            loadClasses();
+            
+            alert(`클래스가 생성되었습니다!\n수강생 등록 코드: ${classCode}`);
+        }
+
+        function deleteClass(classId) {
+            if (!confirm('이 클래스를 삭제하시겠습니까? 클래스의 모든 데이터도 함께 삭제됩니다.')) return;
+            
+            const classes = getTeacherClasses();
+            const filtered = classes.filter(c => c.id !== classId);
+            saveTeacherClasses(filtered);
+            
+            // 클래스 데이터도 삭제
+            localStorage.removeItem(`class_data_${classId}`);
+            
+            loadClasses();
+        }
+
+        function enterClass(classId) {
+            const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+            session.classId = classId;
+            sessionStorage.setItem('userSession', JSON.stringify(session));
+            window.location.href = 'index.html';
+        }
+
+        function loadClasses() {
+            const classes = getTeacherClasses();
+            const grid = document.getElementById('classGrid');
+            
+            if (classes.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #999; padding: 20px; grid-column: 1 / -1;">클래스가 없습니다. 새 클래스를 생성해주세요.</p>';
+                return;
+            }
+            
+            grid.innerHTML = classes.map(cls => {
+                const classData = JSON.parse(localStorage.getItem(`class_data_${cls.id}`) || '{}');
+                const practice1Count = classData.practice1 ? Object.keys(classData.practice1.words || {}).length : 0;
+                const practice2Count = classData.practice2 ? (classData.practice2.notes?.length || 0) : 0;
+                const studentCount = cls.students ? cls.students.length : 0;
+                
+                return `
+                    <div class="class-card">
+                        <h3>${cls.name}</h3>
+                        ${cls.description ? `<p>${cls.description}</p>` : ''}
+                        <div class="class-stats">
+                            <span>수강생: ${studentCount}명</span>
+                            <span>실습1: ${practice1Count}개</span>
+                            <span>실습2: ${practice2Count}개</span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <small style="color: #999;">등록 코드: <strong>${cls.code}</strong></small>
+                        </div>
+                        <div class="class-actions">
+                            <button class="btn btn-primary" onclick="enterClass('${cls.id}')">입장</button>
+                            <button class="btn btn-danger" onclick="deleteClass('${cls.id}')">삭제</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function logout() {
+            sessionStorage.removeItem('userSession');
+        }
+
+        // 초기화
+        window.addEventListener('load', function() {
+            loadClasses();
+        });
+    </script>
+</body>
+</html>
+
+
+

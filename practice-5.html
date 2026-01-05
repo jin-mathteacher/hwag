@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실습 5 - 성찰 기록 연습</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        /* 예시 섹션 (상단 고정) */
+        .example-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px solid #667eea;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .example-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .example-label {
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .example-content {
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 50px;
+        }
+
+        .fact-example {
+            background: #ffebee; /* 연한 분홍색 */
+            color: #333;
+        }
+
+        .reflection-example {
+            background: #e3f2fd; /* 연한 파란색 */
+            color: #333;
+        }
+
+        /* 입력 섹션 */
+        .input-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .input-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-label {
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .input-field {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .fact-input {
+            background: #ffebee; /* 연한 분홍색 */
+        }
+
+        .reflection-input {
+            background: #e3f2fd; /* 연한 파란색 */
+        }
+
+        .submit-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 담벼락 섹션 */
+        .wallboard-section {
+            margin-top: 30px;
+        }
+
+        .wallboard-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .wallboard-container {
+            position: relative;
+            width: 100%;
+            min-height: 600px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .reflection-card {
+            position: absolute;
+            min-width: 280px;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            cursor: move;
+            word-wrap: break-word;
+            z-index: 10;
+            background: white;
+        }
+
+        .reflection-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .card-title {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .card-delete {
+            background: rgba(255,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 1;
+            transition: background 0.2s ease;
+        }
+
+        .card-delete:hover {
+            background: rgba(255,0,0,1);
+        }
+
+        .card-content {
+            margin-bottom: 15px;
+        }
+
+        .card-fact {
+            background: #ffebee; /* 연한 분홍색 */
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .card-fact-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .card-reflection {
+            background: #e3f2fd; /* 연한 파란색 */
+            padding: 12px;
+            border-radius: 5px;
+        }
+
+        .card-reflection-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .card-footer {
+            font-size: 0.85em;
+            color: #999;
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stats p {
+            margin: 5px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 돌아가기</a>
+        
+        <div class="header">
+            <h1>실습 5 - 성찰 기록 연습</h1>
+        </div>
+
+        <!-- 예시 섹션 (상단 고정) -->
+        <div class="example-section">
+            <h2>📋 예시</h2>
+            <div class="example-grid">
+                <div class="example-label">사실</div>
+                <div class="example-content fact-example">
+                    <strong>학생이 수업 시간에 엎드려 있었다.</strong>
+                </div>
+            </div>
+            <div class="example-grid">
+                <div class="example-label">해석/성찰</div>
+                <div class="example-content reflection-example">
+                    내 설명이 너무 길어 지루했을 수 있다. 다음 시간은 활동 중심으로 바꿔보자.
+                </div>
+            </div>
+        </div>
+
+        <!-- 입력 섹션 -->
+        <div class="input-section">
+            <h2>✍️ 성찰 기록 작성</h2>
+            <div class="input-grid">
+                <div class="input-label">사실</div>
+                <textarea 
+                    class="input-field fact-input" 
+                    id="factInput" 
+                    placeholder="관찰한 사실을 객관적으로 기록하세요"
+                ></textarea>
+            </div>
+            <div class="input-grid">
+                <div class="input-label">해석/성찰</div>
+                <textarea 
+                    class="input-field reflection-input" 
+                    id="reflectionInput" 
+                    placeholder="사실에 대한 해석과 성찰을 작성하세요"
+                ></textarea>
+            </div>
+            <button class="submit-button" onclick="addReflection()">기록 추가하기</button>
+        </div>
+
+        <!-- 담벼락 섹션 -->
+        <div class="wallboard-section">
+            <h2>📌 성찰 기록 담벼락</h2>
+            
+            <div class="stats" id="stats">
+                <p><strong>총 기록:</strong> <span id="recordCount">0</span>개</p>
+                <p><strong>참여자:</strong> <span id="participantCount">0</span>명</p>
+            </div>
+
+            <div class="wallboard-container" id="wallboard">
+                <!-- 성찰 기록 카드들이 여기에 동적으로 추가됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let reflections = [];
+        let isDragging = false;
+        let currentCard = null;
+        let offset = { x: 0, y: 0 };
+
+        // 세션 정보 가져오기
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
+
+        // 로드 시 데이터 불러오기
+        loadReflectionData();
+
+        function loadReflectionData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const parsed = JSON.parse(data);
+                reflections = parsed.reflections || [];
+            }
+            renderReflections();
+            updateStats();
+        }
+
+        function saveReflectionData() {
+            const data = {
+                reflections: reflections,
+                lastUpdate: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function addReflection() {
+            const factInput = document.getElementById('factInput');
+            const reflectionInput = document.getElementById('reflectionInput');
+            
+            const fact = factInput.value.trim();
+            const reflection = reflectionInput.value.trim();
+            
+            if (!fact || !reflection) {
+                alert('사실과 해석/성찰을 모두 입력해주세요.');
+                return;
+            }
+
+            const reflectionCard = {
+                id: 'reflection_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                fact: fact,
+                reflection: reflection,
+                userId: session.id || 'anonymous',
+                userName: session.name || '익명',
+                timestamp: Date.now(),
+                x: Math.random() * (window.innerWidth - 500) + 50,
+                y: Math.random() * 300 + 100
+            };
+
+            reflections.push(reflectionCard);
+            saveReflectionData();
+            renderReflections();
+            updateStats();
+            
+            // 입력 필드 초기화
+            factInput.value = '';
+            reflectionInput.value = '';
+        }
+
+        function renderReflections() {
+            const wallboard = document.getElementById('wallboard');
+            wallboard.innerHTML = '';
+            
+            reflections.forEach(reflection => {
+                const card = document.createElement('div');
+                card.className = 'reflection-card';
+                card.id = reflection.id;
+                card.style.left = reflection.x + 'px';
+                card.style.top = reflection.y + 'px';
+                
+                const date = new Date(reflection.timestamp);
+                const dateStr = date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-title">성찰 기록</div>
+                        <button class="card-delete" onclick="deleteReflection('${reflection.id}')" title="삭제">×</button>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-fact">
+                            <div class="card-fact-label">사실</div>
+                            <div>${reflection.fact.replace(/\n/g, '<br>')}</div>
+                        </div>
+                        <div class="card-reflection">
+                            <div class="card-reflection-label">해석/성찰</div>
+                            <div>${reflection.reflection.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        ${reflection.userName} · ${dateStr}
+                    </div>
+                `;
+                
+                // 드래그 이벤트
+                card.addEventListener('mousedown', startDrag);
+                
+                wallboard.appendChild(card);
+            });
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('card-delete')) return;
+            
+            isDragging = true;
+            currentCard = e.currentTarget;
+            const rect = currentCard.getBoundingClientRect();
+            const wallboard = document.getElementById('wallboard');
+            const wallboardRect = wallboard.getBoundingClientRect();
+            
+            offset.x = e.clientX - rect.left;
+            offset.y = e.clientY - rect.top;
+            
+            currentCard.style.zIndex = 1000;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!isDragging || !currentCard) return;
+            
+            const wallboard = document.getElementById('wallboard');
+            const wallboardRect = wallboard.getBoundingClientRect();
+            
+            let x = e.clientX - wallboardRect.left - offset.x;
+            let y = e.clientY - wallboardRect.top - offset.y;
+            
+            // 경계 체크
+            x = Math.max(0, Math.min(x, wallboardRect.width - currentCard.offsetWidth));
+            y = Math.max(0, Math.min(y, wallboardRect.height - currentCard.offsetHeight));
+            
+            currentCard.style.left = x + 'px';
+            currentCard.style.top = y + 'px';
+        }
+
+        function stopDrag() {
+            if (currentCard) {
+                const reflectionId = currentCard.id;
+                const reflection = reflections.find(r => r.id === reflectionId);
+                if (reflection) {
+                    const wallboard = document.getElementById('wallboard');
+                    const wallboardRect = wallboard.getBoundingClientRect();
+                    const cardRect = currentCard.getBoundingClientRect();
+                    
+                    reflection.x = cardRect.left - wallboardRect.left;
+                    reflection.y = cardRect.top - wallboardRect.top;
+                    saveReflectionData();
+                }
+                currentCard.style.zIndex = 10;
+            }
+            
+            isDragging = false;
+            currentCard = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function deleteReflection(reflectionId) {
+            if (!confirm('이 성찰 기록을 삭제하시겠습니까?')) return;
+            
+            reflections = reflections.filter(r => r.id !== reflectionId);
+            saveReflectionData();
+            renderReflections();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('recordCount').textContent = reflections.length;
+            
+            // 참여자 수 계산
+            const participants = new Set(reflections.map(r => r.userId));
+            document.getElementById('participantCount').textContent = participants.size;
+        }
+
+        // Enter 키로 제출 (Ctrl+Enter)
+        document.getElementById('factInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                addReflection();
+            }
+        });
+
+        document.getElementById('reflectionInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                addReflection();
+            }
+        });
+    </script>
+</body>
+</html>

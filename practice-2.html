@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실습 2 - 담벼락</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .practice-content {
+            margin-top: 30px;
+        }
+
+        .practice-section {
+            background: #f8f9fa;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .practice-section h2 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .practice-section p {
+            color: #555;
+            margin: 10px 0;
+            line-height: 1.8;
+        }
+
+        .practice-section ul {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        .practice-section li {
+            margin: 8px 0;
+            color: #555;
+        }
+
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-weight: bold;
+        }
+
+        .link-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .wallboard-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 15px;
+            color: white;
+        }
+
+        .wallboard-section h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .wallboard-container {
+            background: #f5f5f5;
+            min-height: 600px;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .paste-area {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .paste-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            margin-bottom: 15px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .paste-input:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
+        .paste-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 5px;
+        }
+
+        .paste-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .clear-button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        }
+
+        .note-card {
+            position: absolute;
+            min-width: 200px;
+            max-width: 400px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: move;
+            user-select: none;
+            transition: box-shadow 0.3s ease, transform 0.1s ease;
+            z-index: 10;
+        }
+
+        .note-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .note-card.dragging {
+            opacity: 0.8;
+            transform: scale(1.05);
+            z-index: 1000;
+            cursor: grabbing;
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .note-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .note-delete {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            transition: transform 0.3s ease;
+        }
+
+        .note-delete:hover {
+            transform: scale(1.2);
+        }
+
+        .note-content {
+            color: #333;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .note-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .note-stats {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .note-stats span {
+            margin: 0 15px;
+            font-weight: bold;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid white;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .color-option:hover {
+            transform: scale(1.2);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            transform: scale(1.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 돌아가기</a>
+        
+        <div class="header">
+            <h1>실습 2</h1>
+            <p>담벼락</p>
+        </div>
+
+        <div class="practice-content">
+            <div class="wallboard-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">📌 담벼락</h2>
+                    <a id="adminPageButton" href="wordcloud-admin.html" class="link-button" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; display: none;">관리자 페이지</a>
+                </div>
+                <div class="paste-area">
+                    <div style="background: rgba(0, 191, 255, 0.9); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <p style="font-size: 1.3em; font-weight: bold; color: #000; margin: 0 0 10px 0; line-height: 1.6;">
+                            선생님은 어떤 연구자입니까?
+                        </p>
+                        <p style="font-size: 1.1em; color: #000; margin: 0 0 10px 0;">
+                            자신의 현재 상태를 형용사로 표현해 주세요.
+                        </p>
+                        <p style="font-size: 1em; color: #666; margin: 0;">
+                            예시: 나는 <strong style="color: #000; background: rgba(255,255,255,0.5); padding: 2px 8px; border-radius: 5px;">배고픈</strong> 연구자다.
+                        </p>
+                    </div>
+                    
+                    <div class="color-picker" style="margin-bottom: 15px;">
+                        <span style="color: #000; font-weight: bold; margin-right: 10px;">카드 색상:</span>
+                        <div class="color-option selected" data-color="#fff3cd" style="background: #fff3cd;" onclick="selectColor('#fff3cd')"></div>
+                        <div class="color-option" data-color="#d1ecf1" style="background: #d1ecf1;" onclick="selectColor('#d1ecf1')"></div>
+                        <div class="color-option" data-color="#d4edda" style="background: #d4edda;" onclick="selectColor('#d4edda')"></div>
+                        <div class="color-option" data-color="#f8d7da" style="background: #f8d7da;" onclick="selectColor('#f8d7da')"></div>
+                        <div class="color-option" data-color="#e2e3e5" style="background: #e2e3e5;" onclick="selectColor('#e2e3e5')"></div>
+                        <div class="color-option" data-color="#fff" style="background: #fff;" onclick="selectColor('#fff')"></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input 
+                            type="text" 
+                            id="researcherInput" 
+                            class="paste-input" 
+                            placeholder="형용사를 입력하세요 (예: 배고픈, 열정적인, 궁금한 등)"
+                            style="min-height: 50px; margin-bottom: 0; flex: 1; min-width: 200px;"
+                            onkeypress="if(event.key === 'Enter') addResearcherCard()"
+                        >
+                        <button class="paste-button" onclick="addResearcherCard()" style="white-space: nowrap;">추가하기</button>
+                    </div>
+                </div>
+
+                <div class="note-stats">
+                    <span>카드 수: <span id="noteCount">0</span>개</span>
+                    <span>참여자 수: <span id="participantCount">0</span>명</span>
+                </div>
+
+                <div id="wallboard" class="wallboard-container">
+                    <!-- 카드들이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 세션 확인 및 클래스 ID 가져오기
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (!session.classId && session.type !== 'admin' && session.type !== 'student') {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+        
+        // 관리자 페이지 버튼 표시 (강사/관리자만)
+        const adminPageButton = document.getElementById('adminPageButton');
+        if (session.type === 'teacher' || session.type === 'admin') {
+            adminPageButton.style.display = 'inline-block';
+        } else {
+            adminPageButton.style.display = 'none';
+        }
+        
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `class_data_${CLASS_ID}`;
+        const USER_ID_KEY = `user_id_${CLASS_ID}`;
+        const SYNC_INTERVAL = 2000;
+        let selectedColor = '#fff3cd';
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let noteIdCounter = 0;
+
+        // 사용자 ID 생성
+        let userId = localStorage.getItem(USER_ID_KEY);
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem(USER_ID_KEY, userId);
+        }
+
+        // 클래스 데이터 구조
+        function getClassData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return {
+                practice1: {
+                    words: {},
+                    participants: [],
+                    lastUpdate: Date.now()
+                },
+                practice2: {
+                    notes: [],
+                    participants: [],
+                    lastUpdate: Date.now()
+                }
+            };
+        }
+
+        function saveClassData(classData) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+        }
+
+        // 데이터 로드
+        function loadWallboardData() {
+            const classData = getClassData();
+            const data = classData.practice2 || {
+                notes: [],
+                participants: [],
+                lastUpdate: Date.now()
+            };
+            // 배열을 Set으로 변환
+            data.participants = new Set(data.participants || []);
+            return data;
+        }
+
+        // 데이터 저장
+        function saveWallboardData(data) {
+            const classData = getClassData();
+            classData.practice2 = {
+                notes: data.notes,
+                participants: Array.from(data.participants),
+                lastUpdate: data.lastUpdate
+            };
+            saveClassData(classData);
+        }
+
+        // 색상 선택
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+        }
+
+        // 연구자 카드 추가
+        function addResearcherCard() {
+            const input = document.getElementById('researcherInput');
+            const adjective = input.value.trim();
+            
+            if (!adjective) {
+                alert('형용사를 입력해주세요.');
+                return;
+            }
+
+            // 자동으로 "나는 [형용사] 연구자다." 형태로 변환
+            const content = `나는 <strong style="font-size: 1.2em; color: #667eea;">${adjective}</strong> 연구자다.`;
+
+            const data = loadWallboardData();
+            data.participants.add(userId);
+
+            const note = {
+                id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                content: content,
+                color: selectedColor,
+                x: Math.random() * 300 + 50,
+                y: Math.random() * 200 + 50,
+                userId: userId,
+                timestamp: Date.now()
+            };
+
+            data.notes.push(note);
+            data.lastUpdate = Date.now();
+            saveWallboardData(data);
+
+            input.value = '';
+            renderNotes();
+            updateStats();
+        }
+
+        // 이미지 처리
+        function handleImagePaste(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.style.maxWidth = '100%';
+                        
+                        const data = loadWallboardData();
+                        data.participants.add(userId);
+
+                        const note = {
+                            id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            content: `<img src="${event.target.result}" alt="붙여넣은 이미지">`,
+                            color: selectedColor,
+                            x: Math.random() * 300 + 50,
+                            y: Math.random() * 200 + 50,
+                            userId: userId,
+                            timestamp: Date.now()
+                        };
+
+                        data.notes.push(note);
+                        data.lastUpdate = Date.now();
+                        saveWallboardData(data);
+
+                        renderNotes();
+                        updateStats();
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+
+        // 카드 렌더링
+        function renderNotes() {
+            const wallboard = document.getElementById('wallboard');
+            const data = loadWallboardData();
+            
+            wallboard.innerHTML = '';
+            
+            data.notes.forEach(note => {
+                const noteElement = createNoteElement(note);
+                wallboard.appendChild(noteElement);
+            });
+        }
+
+        // 카드 요소 생성
+        function createNoteElement(note) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note-card';
+            noteDiv.id = note.id;
+            noteDiv.style.left = note.x + 'px';
+            noteDiv.style.top = note.y + 'px';
+            noteDiv.style.backgroundColor = note.color;
+            noteDiv.draggable = false;
+
+            // 수강생은 자신이 작성한 카드만 삭제 버튼 표시
+            const canDelete = session.type === 'admin' || session.type === 'teacher' || note.userId === userId;
+            const deleteButton = canDelete 
+                ? `<button class="note-delete" onclick="deleteNote('${note.id}')" title="삭제">×</button>`
+                : '';
+            
+            noteDiv.innerHTML = `
+                <div class="note-header">
+                    <span class="note-color" style="background: ${note.color};"></span>
+                    ${deleteButton}
+                </div>
+                <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
+            `;
+
+            // 드래그 기능 추가
+            makeDraggable(noteDiv, note.id);
+
+            return noteDiv;
+        }
+
+        // 드래그 가능하게 만들기
+        function makeDraggable(element, noteId) {
+            element.addEventListener('mousedown', function(e) {
+                if (e.target.classList.contains('note-delete')) return;
+                
+                draggedElement = element;
+                const rect = element.getBoundingClientRect();
+                const wallboardRect = document.getElementById('wallboard').getBoundingClientRect();
+                
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                element.classList.add('dragging');
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!draggedElement) return;
+                
+                const wallboard = document.getElementById('wallboard');
+                const wallboardRect = wallboard.getBoundingClientRect();
+                
+                let x = e.clientX - wallboardRect.left - offsetX;
+                let y = e.clientY - wallboardRect.top - offsetY;
+                
+                // 경계 체크
+                x = Math.max(0, Math.min(x, wallboardRect.width - draggedElement.offsetWidth));
+                y = Math.max(0, Math.min(y, wallboardRect.height - draggedElement.offsetHeight));
+                
+                draggedElement.style.left = x + 'px';
+                draggedElement.style.top = y + 'px';
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (draggedElement) {
+                    draggedElement.classList.remove('dragging');
+                    
+                    // 위치 저장
+                    const data = loadWallboardData();
+                    const note = data.notes.find(n => n.id === noteId);
+                    if (note) {
+                        const wallboard = document.getElementById('wallboard');
+                        const wallboardRect = wallboard.getBoundingClientRect();
+                        const noteRect = draggedElement.getBoundingClientRect();
+                        
+                        note.x = noteRect.left - wallboardRect.left;
+                        note.y = noteRect.top - wallboardRect.top;
+                        data.lastUpdate = Date.now();
+                        saveWallboardData(data);
+                    }
+                    
+                    draggedElement = null;
+                }
+            });
+        }
+
+        // 카드 삭제
+        function deleteNote(noteId) {
+            const data = loadWallboardData();
+            const note = data.notes.find(n => n.id === noteId);
+            
+            if (!note) {
+                alert('카드를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 수강생은 자신이 작성한 카드만 삭제 가능
+            if (session.type === 'student' && note.userId !== userId) {
+                alert('자신이 작성한 카드만 삭제할 수 있습니다.');
+                return;
+            }
+            
+            // 강사/관리자는 모든 카드 삭제 가능
+            if (!confirm('이 카드를 삭제하시겠습니까?')) return;
+            
+            data.notes = data.notes.filter(n => n.id !== noteId);
+            data.lastUpdate = Date.now();
+            saveWallboardData(data);
+            
+            renderNotes();
+            updateStats();
+        }
+
+        // 전체 삭제 (관리자 전용 - 관리자 페이지에서만 사용)
+        function clearAll() {
+            if (!confirm('모든 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+            
+            const data = loadWallboardData();
+            data.notes = [];
+            data.lastUpdate = Date.now();
+            saveWallboardData(data);
+            
+            renderNotes();
+            updateStats();
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            const data = loadWallboardData();
+            document.getElementById('noteCount').textContent = data.notes.length;
+            document.getElementById('participantCount').textContent = data.participants.size;
+        }
+
+        // 이미지 붙여넣기 (담벼락에 직접)
+        document.getElementById('wallboard').addEventListener('paste', handleImagePaste);
+        document.addEventListener('paste', function(e) {
+            handleImagePaste(e);
+        });
+
+        // 초기화
+        window.addEventListener('load', function() {
+            renderNotes();
+            updateStats();
+            
+            // 주기적 동기화
+            setInterval(function() {
+                renderNotes();
+                updateStats();
+            }, SYNC_INTERVAL);
+            
+            // 다른 탭에서의 변경사항 감지
+            window.addEventListener('storage', function(e) {
+                if (e.key === STORAGE_KEY) {
+                    renderNotes();
+                    updateStats();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
