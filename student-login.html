@@ -172,24 +172,72 @@
 
     <!-- Supabase 스크립트 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js"></script>
-
+    
     <script>
-        // Supabase 클라이언트 가져오기 (초기화 대기)
-        let supabase = null;
+        // Supabase 클라이언트 초기화 (즉시 실행 함수로 중복 방지)
+        (function() {
+            'use strict';
+            
+            // 이미 초기화되었으면 건너뛰기
+            if (window.supabaseClient) {
+                console.log('✅ Supabase 클라이언트가 이미 초기화되어 있습니다.');
+                return;
+            }
+            
+            const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+            
+            // Supabase 라이브러리 로드 대기
+            function initSupabase() {
+                if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+                    try {
+                        if (!window.supabaseClient) {
+                            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                            console.log('✅ Supabase 클라이언트 초기화 완료');
+                        }
+                    } catch (error) {
+                        console.error('❌ Supabase 클라이언트 생성 실패:', error);
+                    }
+                } else {
+                    // 아직 로드되지 않았으면 100ms 후 다시 시도 (최대 5초)
+                    if (typeof initSupabase.retryCount === 'undefined') {
+                        initSupabase.retryCount = 0;
+                    }
+                    if (initSupabase.retryCount < 50) {
+                        initSupabase.retryCount++;
+                        setTimeout(initSupabase, 100);
+                    } else {
+                        console.error('❌ Supabase 라이브러리를 로드할 수 없습니다.');
+                    }
+                }
+            }
+            
+            // 즉시 초기화 시도
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSupabase);
+            } else {
+                initSupabase();
+            }
+        })();
         
-        // Supabase 클라이언트 초기화 확인
+        // Supabase 클라이언트 가져오기
         function getSupabaseClient() {
             if (window.supabaseClient) {
                 return window.supabaseClient;
             }
-            // Supabase가 아직 로드되지 않았으면 직접 생성
-            if (typeof supabase !== 'undefined') {
+            // 클라이언트가 없으면 다시 초기화 시도
+            if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
                 const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
-                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                return window.supabaseClient;
+                try {
+                    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('✅ Supabase 클라이언트 생성 완료 (지연 초기화)');
+                    return window.supabaseClient;
+                } catch (error) {
+                    console.error('❌ Supabase 클라이언트 생성 실패:', error);
+                }
             }
+            console.warn('⚠️ Supabase 클라이언트를 사용할 수 없습니다.');
             return null;
         }
 
@@ -226,11 +274,22 @@
                         };
                     } else if (error) {
                         // 테이블이 없거나 에러가 발생한 경우
+                        console.error('❌ Supabase 검색 오류 상세:', {
+                            code: error.code,
+                            message: error.message,
+                            details: error.details,
+                            hint: error.hint
+                        });
                         if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
                             console.warn('⚠️ Supabase 테이블이 없습니다. localStorage에서 검색합니다.');
+                        } else if (error.code === 'PGRST301' || error.message?.includes('permission denied') || error.message?.includes('RLS')) {
+                            console.error('❌ RLS 정책 오류: Supabase 테이블에 접근 권한이 없습니다.');
+                            console.error('💡 해결 방법: Supabase 대시보드에서 supabase-classes-setup.sql을 실행하세요.');
                         } else {
                             console.warn('⚠️ Supabase 검색 오류:', error);
                         }
+                    } else if (!data) {
+                        console.log('ℹ️ Supabase에서 클래스를 찾지 못했습니다 (데이터 없음)');
                     }
                 } catch (error) {
                     console.error('❌ 클래스 검색 예외:', error);
