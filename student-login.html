@@ -196,21 +196,24 @@
         // Supabase에서 등록 코드로 클래스 찾기
         async function findClassByCode(code) {
             const supabaseClient = getSupabaseClient();
+            const searchCode = code.toUpperCase().trim();
             
-            // Supabase를 사용할 수 있는 경우
+            console.log('🔍 클래스 검색 시작:', searchCode);
+            
+            // 1단계: Supabase에서 검색
             if (supabaseClient) {
                 try {
-                    console.log('Supabase에서 클래스 검색 중...', code.toUpperCase());
+                    console.log('📡 Supabase에서 클래스 검색 중...');
                     const { data, error } = await supabaseClient
                         .from('classes')
                         .select('*')
-                        .eq('code', code.toUpperCase())
+                        .eq('code', searchCode)
                         .maybeSingle();
                     
-                    console.log('Supabase 검색 결과:', { data, error });
+                    console.log('📡 Supabase 검색 결과:', { data, error });
                     
                     if (!error && data) {
-                        // 성공적으로 찾음
+                        console.log('✅ Supabase에서 클래스를 찾았습니다:', data);
                         return {
                             class: {
                                 id: data.id,
@@ -224,33 +227,38 @@
                     } else if (error) {
                         // 테이블이 없거나 에러가 발생한 경우
                         if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-                            console.warn('Supabase 테이블이 없습니다. localStorage에서 검색합니다.');
+                            console.warn('⚠️ Supabase 테이블이 없습니다. localStorage에서 검색합니다.');
                         } else {
-                            console.warn('Supabase 검색 오류:', error);
+                            console.warn('⚠️ Supabase 검색 오류:', error);
                         }
                     }
                 } catch (error) {
-                    console.error('클래스 검색 예외:', error);
+                    console.error('❌ 클래스 검색 예외:', error);
                 }
             }
             
-            // Supabase에서 찾지 못했거나 사용할 수 없는 경우 localStorage에서 찾기
-            console.log('localStorage에서 클래스 검색 중...');
+            // 2단계: localStorage에서 검색 (하위 호환성)
+            console.log('💾 localStorage에서 클래스 검색 중...');
             const keys = Object.keys(localStorage);
             for (let key of keys) {
                 if (key.startsWith('teacher_classes_')) {
-                    const classes = JSON.parse(localStorage.getItem(key) || '[]');
-                    const found = classes.find(c => c.code === code.toUpperCase());
-                    if (found) {
-                        console.log('localStorage에서 클래스를 찾았습니다:', found);
-                        return {
-                            class: found,
-                            teacherUsername: key.replace('teacher_classes_', '')
-                        };
+                    try {
+                        const classes = JSON.parse(localStorage.getItem(key) || '[]');
+                        const found = classes.find(c => c.code === searchCode);
+                        if (found) {
+                            console.log('✅ localStorage에서 클래스를 찾았습니다:', found);
+                            return {
+                                class: found,
+                                teacherUsername: key.replace('teacher_classes_', '')
+                            };
+                        }
+                    } catch (e) {
+                        console.error('localStorage 파싱 오류:', e);
                     }
                 }
             }
             
+            console.log('❌ 클래스를 찾을 수 없습니다:', searchCode);
             return null;
         }
 

@@ -76,32 +76,36 @@ COMMENT ON COLUMN public.students.registered_at IS '수강생 등록 시간';
 ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 
 -- 기존 정책 삭제 (있는 경우)
+DROP POLICY IF EXISTS "Classes Public Read Access" ON public.classes;
+DROP POLICY IF EXISTS "Classes Public Insert Access" ON public.classes;
+DROP POLICY IF EXISTS "Classes Public Update Access" ON public.classes;
+DROP POLICY IF EXISTS "Classes Public Delete Access" ON public.classes;
 DROP POLICY IF EXISTS "Public Read Access" ON public.classes;
 DROP POLICY IF EXISTS "Public Insert Access" ON public.classes;
 DROP POLICY IF EXISTS "Public Update Access" ON public.classes;
 DROP POLICY IF EXISTS "Public Delete Access" ON public.classes;
 
 -- 정책 1: 조회(SELECT) - 누구나(anon) 가능 (등록 코드로 클래스 찾기 위해)
-CREATE POLICY "Public Read Access"
+CREATE POLICY "Classes Public Read Access"
 ON public.classes
 FOR SELECT
 USING (true);
 
 -- 정책 2: 추가(INSERT) - 누구나(anon) 가능 (강사가 클래스 생성)
-CREATE POLICY "Public Insert Access"
+CREATE POLICY "Classes Public Insert Access"
 ON public.classes
 FOR INSERT
 WITH CHECK (true);
 
 -- 정책 3: 수정(UPDATE) - 누구나(anon) 가능 (강사가 클래스 수정)
-CREATE POLICY "Public Update Access"
+CREATE POLICY "Classes Public Update Access"
 ON public.classes
 FOR UPDATE
 USING (true)
 WITH CHECK (true);
 
 -- 정책 4: 삭제(DELETE) - 누구나(anon) 가능 (강사가 클래스 삭제)
-CREATE POLICY "Public Delete Access"
+CREATE POLICY "Classes Public Delete Access"
 ON public.classes
 FOR DELETE
 USING (true);
