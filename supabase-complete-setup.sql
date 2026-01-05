@@ -197,3 +197,4 @@ BEGIN
     RAISE NOTICE '✅ 모든 설정이 완료되었습니다!';
 END $$;
 
+

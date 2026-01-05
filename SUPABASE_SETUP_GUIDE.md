@@ -180,3 +180,4 @@ USING (
 
 자세한 구현 방법은 `SUPABASE_INTEGRATION.md`를 참고하세요.
 
+

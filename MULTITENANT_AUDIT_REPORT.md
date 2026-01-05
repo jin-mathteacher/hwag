@@ -175,3 +175,4 @@ function enterClass(classId) {
 
 각 클래스는 고유한 `classId`를 통해 완전히 격리되어 있으며, 모든 실습 페이지에서 이 격리가 일관되게 유지되고 있습니다.
 
+

@@ -226,3 +226,4 @@ WHERE tablename = 'objects' AND schemaname = 'storage';
 - RLS 정책이 올바르게 설정되었는지 확인
 - 사용자 권한 확인
 
+

@@ -69,3 +69,4 @@ USING (
 -- SELECT * FROM storage.buckets WHERE id = 'class-materials';
 -- SELECT * FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage';
 
+
