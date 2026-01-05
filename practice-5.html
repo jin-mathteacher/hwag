@@ -369,8 +369,13 @@
         let currentCard = null;
         let offset = { x: 0, y: 0 };
 
-        // 세션 정보 가져오기
+        // 세션 확인 및 로그인 체크
         const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (!session.type || (session.type !== 'teacher' && session.type !== 'student' && session.type !== 'admin')) {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+
         const CLASS_ID = session.classId || 'default';
         const STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
 
@@ -432,7 +437,13 @@
             const wallboard = document.getElementById('wallboard');
             wallboard.innerHTML = '';
             
-            reflections.forEach(reflection => {
+            // 수강생은 자신이 작성한 성찰 기록만 보이도록 필터링
+            let visibleReflections = reflections;
+            if (session.type === 'student') {
+                visibleReflections = reflections.filter(reflection => reflection.userId === userId);
+            }
+            
+            visibleReflections.forEach(reflection => {
                 const card = document.createElement('div');
                 card.className = 'reflection-card';
                 card.id = reflection.id;
@@ -442,10 +453,22 @@
                 const date = new Date(reflection.timestamp);
                 const dateStr = date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 
+                // 본인 작성 표기 (수강생인 경우)
+                const isOwnReflection = reflection.userId === userId;
+                const ownBadge = (session.type === 'student' && isOwnReflection) 
+                    ? '<span style="font-size: 0.7em; color: #667eea; font-weight: bold; margin-left: 5px;">(본인 작성)</span>' 
+                    : '';
+                
+                // 삭제 버튼 (본인 또는 강사/관리자만)
+                const canDelete = (session.type === 'teacher' || session.type === 'admin' || isOwnReflection);
+                const deleteButton = canDelete 
+                    ? `<button class="card-delete" onclick="deleteReflection('${reflection.id}')" title="삭제">×</button>`
+                    : '';
+                
                 card.innerHTML = `
                     <div class="card-header">
-                        <div class="card-title">성찰 기록</div>
-                        <button class="card-delete" onclick="deleteReflection('${reflection.id}')" title="삭제">×</button>
+                        <div class="card-title">성찰 기록 ${ownBadge}</div>
+                        ${deleteButton}
                     </div>
                     <div class="card-content">
                         <div class="card-fact">
@@ -527,6 +550,18 @@
         }
 
         function deleteReflection(reflectionId) {
+            const reflectionToDelete = reflections.find(r => r.id === reflectionId);
+            if (!reflectionToDelete) {
+                alert('해당 성찰 기록을 찾을 수 없습니다.');
+                return;
+            }
+
+            // 권한 확인
+            if (session.type === 'student' && reflectionToDelete.userId !== userId) {
+                alert('자신이 작성한 성찰 기록만 삭제할 수 있습니다.');
+                return;
+            }
+
             if (!confirm('이 성찰 기록을 삭제하시겠습니까?')) return;
             
             reflections = reflections.filter(r => r.id !== reflectionId);
@@ -536,10 +571,16 @@
         }
 
         function updateStats() {
-            document.getElementById('recordCount').textContent = reflections.length;
+            // 수강생은 자신의 성찰 기록만 카운트
+            let visibleReflections = reflections;
+            if (session.type === 'student') {
+                visibleReflections = reflections.filter(r => r.userId === userId);
+            }
+            
+            document.getElementById('recordCount').textContent = visibleReflections.length;
             
             // 참여자 수 계산
-            const participants = new Set(reflections.map(r => r.userId));
+            const participants = new Set(visibleReflections.map(r => r.userId));
             document.getElementById('participantCount').textContent = participants.size;
         }
 

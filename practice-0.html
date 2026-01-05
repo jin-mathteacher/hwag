@@ -687,11 +687,24 @@
             }
         }
 
+        // 세션 확인 및 로그인 체크
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (!session.type || (session.type !== 'teacher' && session.type !== 'student' && session.type !== 'admin')) {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+        }
+
         // 페이지 로드 시 배경음악 준비
         window.addEventListener('load', function() {
             const bgm = document.getElementById('bgm');
             bgm.volume = 0.5;
         });
     </script>
+    <div class="credit">
+        제작 도움 출처<br>
+        영상: VEO3<br>
+        이미지: 나노바나나<br>
+        음원: 로제와 브루노마스의 아파트
+    </div>
 </body>
 </html>

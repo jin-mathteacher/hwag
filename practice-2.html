@@ -531,7 +531,13 @@
             
             wallboard.innerHTML = '';
             
-            data.notes.forEach(note => {
+            // 수강생은 자신이 작성한 카드만 보이도록 필터링
+            let visibleNotes = data.notes;
+            if (session.type === 'student') {
+                visibleNotes = data.notes.filter(note => note.userId === userId);
+            }
+            
+            visibleNotes.forEach(note => {
                 const noteElement = createNoteElement(note);
                 wallboard.appendChild(noteElement);
             });
@@ -547,8 +553,14 @@
             noteDiv.style.backgroundColor = note.color;
             noteDiv.draggable = false;
 
+            // 본인 작성 표기 (수강생인 경우)
+            const isOwnNote = note.userId === userId;
+            const ownBadge = (session.type === 'student' && isOwnNote) 
+                ? '<span style="font-size: 0.7em; color: #667eea; font-weight: bold; margin-left: 5px;">(본인 작성)</span>' 
+                : '';
+
             // 수강생은 자신이 작성한 카드만 삭제 버튼 표시
-            const canDelete = session.type === 'admin' || session.type === 'teacher' || note.userId === userId;
+            const canDelete = session.type === 'admin' || session.type === 'teacher' || isOwnNote;
             const deleteButton = canDelete 
                 ? `<button class="note-delete" onclick="deleteNote('${note.id}')" title="삭제">×</button>`
                 : '';
@@ -556,6 +568,7 @@
             noteDiv.innerHTML = `
                 <div class="note-header">
                     <span class="note-color" style="background: ${note.color};"></span>
+                    ${ownBadge}
                     ${deleteButton}
                 </div>
                 <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
@@ -666,8 +679,17 @@
         // 통계 업데이트
         function updateStats() {
             const data = loadWallboardData();
-            document.getElementById('noteCount').textContent = data.notes.length;
-            document.getElementById('participantCount').textContent = data.participants.size;
+            
+            // 수강생은 자신의 카드만 카운트
+            let visibleNotes = data.notes;
+            if (session.type === 'student') {
+                visibleNotes = data.notes.filter(note => note.userId === userId);
+            }
+            
+            document.getElementById('noteCount').textContent = visibleNotes.length;
+            
+            const uniqueParticipants = new Set(visibleNotes.map(note => note.userId));
+            document.getElementById('participantCount').textContent = uniqueParticipants.size;
         }
 
         // 이미지 붙여넣기 (담벼락에 직접)
