@@ -317,8 +317,7 @@
                     }
 
                     // 업로더 정보 저장 (메타데이터에 저장)
-                    const uploaderName = session.name || session.username || '익명';
-                    
+                                       
                     const { data: dbData, error: dbError } = await supabase
                         .from('files')
                         .insert([
