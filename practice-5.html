@@ -30,7 +30,6 @@
         }
 
         .header {
-            text-align: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 3px solid #667eea;
@@ -39,7 +38,14 @@
         .header h1 {
             color: #667eea;
             font-size: 2.5em;
-            margin-bottom: 10px;
+            margin: 0;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
         }
 
         .back-button {
@@ -55,6 +61,25 @@
 
         .back-button:hover {
             background: #764ba2;
+        }
+
+        .link-button {
+            display: inline-block !important;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: 2px solid white;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .link-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
         }
 
         /* 예시 섹션 (상단 고정) */
@@ -306,7 +331,10 @@
         <a href="index.html" class="back-button">← 돌아가기</a>
         
         <div class="header">
-            <h1>실습 5 - 성찰 기록 연습</h1>
+            <div class="header-container">
+                <h1>실습 5 - 성찰 기록 연습</h1>
+                <a href="wordcloud-admin.html" id="practice5AdminButton" class="link-button" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; display: none;">관리자 페이지</a>
+            </div>
         </div>
 
         <!-- 예시 섹션 (상단 고정) -->
@@ -376,8 +404,21 @@
             window.location.href = 'login.html';
         }
 
+        // 관리자 페이지 버튼 표시 (강사/관리자만)
+        const practice5AdminButton = document.getElementById('practice5AdminButton');
+        if (practice5AdminButton) {
+            if (session.type === 'teacher' || session.type === 'admin') {
+                practice5AdminButton.style.display = 'inline-block';
+                practice5AdminButton.style.visibility = 'visible';
+                practice5AdminButton.style.opacity = '1';
+            } else {
+                practice5AdminButton.style.display = 'none';
+            }
+        }
+
         const CLASS_ID = session.classId || 'default';
         const STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
+        const userId = session.id || 'anonymous_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
         // 로드 시 데이터 불러오기
         loadReflectionData();
@@ -416,8 +457,8 @@
                 id: 'reflection_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 fact: fact,
                 reflection: reflection,
-                userId: session.id || 'anonymous',
-                userName: session.name || '익명',
+                userId: userId,
+                userName: session.name || session.username || '익명',
                 timestamp: Date.now(),
                 x: Math.random() * (window.innerWidth - 500) + 50,
                 y: Math.random() * 300 + 100

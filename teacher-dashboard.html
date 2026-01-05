@@ -389,11 +389,40 @@
                         </div>
                         <div class="class-actions">
                             <button class="btn btn-primary" onclick="enterClass('${cls.id}')">입장</button>
-                            <button class="btn btn-danger" onclick="deleteClass('${cls.id}')">삭제</button>
+                            <button class="btn btn-danger" onclick="deleteClass('${cls.id}')">클래스 삭제</button>
                         </div>
+                        ${studentCount > 0 ? `
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                                <h4 style="color: #667eea; margin-bottom: 10px;">수강생 목록</h4>
+                                <div style="max-height: 200px; overflow-y: auto;">
+                                    ${cls.students.map((student, idx) => `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 5px; margin-bottom: 5px;">
+                                            <span>${student.name || '익명'} (${student.id || 'N/A'})</span>
+                                            <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.85em;" onclick="deleteStudent('${cls.id}', '${student.id}')">삭제</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
+        }
+
+        function deleteStudent(classId, studentId) {
+            if (!confirm('이 수강생을 삭제하시겠습니까?')) return;
+            
+            const classes = getTeacherClasses();
+            const classIndex = classes.findIndex(c => c.id === classId);
+            if (classIndex === -1) return;
+            
+            const cls = classes[classIndex];
+            if (cls.students) {
+                cls.students = cls.students.filter(s => s.id !== studentId);
+                saveTeacherClasses(classes);
+                loadClasses();
+                alert('수강생이 삭제되었습니다.');
+            }
         }
 
         function logout() {

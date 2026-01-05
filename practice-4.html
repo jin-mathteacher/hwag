@@ -57,6 +57,23 @@
             background: #764ba2;
         }
 
+        .link-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 5px;
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .link-button:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
         .menu-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -309,8 +326,11 @@
         <!-- 교육 현황 공유하기 (담벼락) -->
         <div class="content-section" id="content3">
             <button class="close-button" onclick="showMenu()">← 메뉴로 돌아가기</button>
-            <div class="wallboard-section">
-                <h2 style="color: #667eea; margin-bottom: 20px;">📌 교육 현황 공유 담벼락</h2>
+                    <div class="wallboard-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="color: #667eea; margin: 0;">📌 교육 현황 공유 담벼락</h2>
+                            <a href="wordcloud-admin.html" id="practice4AdminButton" class="link-button" style="background: rgba(102, 126, 234, 0.2); color: #667eea; border: 2px solid #667eea; display: none;">관리자 페이지</a>
+                        </div>
                 
                 <div class="stats" id="stats">
                     <p><strong>총 메모:</strong> <span id="noteCount">0</span>개</p>
@@ -356,6 +376,16 @@
         if (!session.type || (session.type !== 'teacher' && session.type !== 'student' && session.type !== 'admin')) {
             alert('로그인이 필요합니다.');
             window.location.href = 'login.html';
+        }
+
+        // 관리자 페이지 버튼 표시 (강사/관리자만)
+        const practice4AdminButton = document.getElementById('practice4AdminButton');
+        if (practice4AdminButton) {
+            if (session.type === 'teacher' || session.type === 'admin') {
+                practice4AdminButton.style.display = 'inline-block';
+            } else {
+                practice4AdminButton.style.display = 'none';
+            }
         }
 
         const CLASS_ID = session.classId || 'default';

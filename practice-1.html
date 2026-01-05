@@ -204,7 +204,7 @@
             <div class="wordcloud-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin: 0;">☁️ 워드크라우드 실습</h2>
-                    <a href="wordcloud-admin.html" class="link-button" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white;">관리자 페이지</a>
+                    <a href="wordcloud-admin.html" id="practice1AdminButton" class="link-button" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; display: none;">관리자 페이지</a>
                 </div>
                 
                 <div style="background: rgba(0, 191, 255, 0.9); padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
@@ -249,6 +249,16 @@
         if (!session.classId && session.type !== 'admin' && session.type !== 'student') {
             alert('로그인이 필요합니다.');
             window.location.href = 'login.html';
+        }
+        
+        // 관리자 페이지 버튼 표시 (강사/관리자만)
+        const practice1AdminButton = document.getElementById('practice1AdminButton');
+        if (practice1AdminButton) {
+            if (session.type === 'teacher' || session.type === 'admin') {
+                practice1AdminButton.style.display = 'inline-block';
+            } else {
+                practice1AdminButton.style.display = 'none';
+            }
         }
         
         const CLASS_ID = session.classId || 'default';

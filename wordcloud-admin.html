@@ -290,17 +290,17 @@
 <body>
     <div class="container">
         <a href="index.html" class="back-button">← 홈으로</a>
-        <a href="practice-1.html" class="back-button" style="margin-left: 10px;">실습 1로</a>
-        <a href="practice-2.html" class="back-button" style="margin-left: 10px;">실습 2로</a>
         
         <div class="header">
             <h1>관리자 페이지</h1>
-            <p>실습 1 & 2 통합 관리</p>
+            <p>실습 1, 2, 4, 5 통합 관리</p>
         </div>
 
         <div class="tab-container">
             <button class="tab-button active" onclick="switchTab('practice1')">실습 1 - 워드크라우드</button>
             <button class="tab-button" onclick="switchTab('practice2')">실습 2 - 담벼락</button>
+            <button class="tab-button" onclick="switchTab('practice4')">실습 4 - 교육 현황 공유하기</button>
+            <button class="tab-button" onclick="switchTab('practice5')">실습 5 - 성찰 기록 연습</button>
         </div>
 
         <!-- 실습 1 탭 -->
@@ -387,6 +387,70 @@
                 마지막 업데이트: <span id="wallboardLastUpdateTime">-</span>
             </div>
         </div>
+
+        <!-- 실습 4 탭 -->
+        <div id="practice4-tab" class="tab-content">
+            <div class="admin-controls">
+                <button class="admin-btn refresh-btn" onclick="refreshPractice4Data()">🔄 새로고침</button>
+                <button class="admin-btn export-btn" onclick="exportPractice4Data()">📥 데이터 내보내기</button>
+                <button class="admin-btn image-btn" onclick="downloadPractice4Image()">🖼️ 이미지 다운로드</button>
+                <button class="admin-btn clear-btn" onclick="clearPractice4Data()">🗑️ 전체 삭제</button>
+            </div>
+
+            <div class="wallboard-stats">
+                <div class="wallboard-stat">
+                    <h4>총 메모 수</h4>
+                    <div class="value" id="practice4NoteCount">0</div>
+                </div>
+                <div class="wallboard-stat">
+                    <h4>참여자 수</h4>
+                    <div class="value" id="practice4ParticipantCount">0</div>
+                </div>
+            </div>
+
+            <div class="word-list-section">
+                <h2>📌 메모 목록</h2>
+                <div id="practice4NoteList">
+                    <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>
+                </div>
+            </div>
+
+            <div class="last-update">
+                마지막 업데이트: <span id="practice4LastUpdateTime">-</span>
+            </div>
+        </div>
+
+        <!-- 실습 5 탭 -->
+        <div id="practice5-tab" class="tab-content">
+            <div class="admin-controls">
+                <button class="admin-btn refresh-btn" onclick="refreshPractice5Data()">🔄 새로고침</button>
+                <button class="admin-btn export-btn" onclick="exportPractice5Data()">📥 데이터 내보내기</button>
+                <button class="admin-btn image-btn" onclick="downloadPractice5Image()">🖼️ 이미지 다운로드</button>
+                <button class="admin-btn clear-btn" onclick="clearPractice5Data()">🗑️ 전체 삭제</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>총 기록 수</h3>
+                    <div class="value" id="practice5RecordCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>참여자 수</h3>
+                    <div class="value" id="practice5ParticipantCount">0</div>
+                </div>
+            </div>
+
+            <div class="word-list-section">
+                <h2>📝 성찰 기록 목록</h2>
+                <div id="practice5ReflectionList">
+                    <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>
+                </div>
+            </div>
+
+            <div class="last-update">
+                마지막 업데이트: <span id="practice5LastUpdateTime">-</span>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -397,22 +461,47 @@
             window.location.href = 'login.html';
         }
         
-        const CLASS_ID = session.classId || 'default';
+        // URL 쿼리 파라미터에서 클래스 ID 가져오기 (총 관리자가 다른 강사의 클래스를 볼 때)
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryClassId = urlParams.get('classId');
+        const queryClassName = urlParams.get('className');
+        
+        // 쿼리 파라미터가 있으면 해당 클래스 ID 사용, 없으면 세션의 클래스 ID 사용
+        const CLASS_ID = queryClassId || session.classId || 'default';
         const STORAGE_KEY = `class_data_${CLASS_ID}`;
+        const PRACTICE4_STORAGE_KEY = `wallboard_practice4_${CLASS_ID}`;
+        const PRACTICE5_STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
         const SYNC_INTERVAL = 1000; // 1초마다 새로고침
+        
+        // 총 관리자가 다른 강사의 클래스를 볼 때 헤더에 클래스 정보 표시
+        if (queryClassId && queryClassName) {
+            const header = document.querySelector('.header p');
+            if (header) {
+                header.textContent = `${queryClassName} - 실습 1, 2, 4, 5 통합 관리`;
+            }
+        }
 
         // 탭 전환
         function switchTab(tabName) {
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
+            const buttons = document.querySelectorAll('.tab-button');
             if (tabName === 'practice1') {
-                document.querySelector('.tab-button:first-child').classList.add('active');
+                buttons[0].classList.add('active');
                 document.getElementById('practice1-tab').classList.add('active');
-            } else {
-                document.querySelector('.tab-button:last-child').classList.add('active');
+            } else if (tabName === 'practice2') {
+                buttons[1].classList.add('active');
                 document.getElementById('practice2-tab').classList.add('active');
                 refreshWallboardData();
+            } else if (tabName === 'practice4') {
+                buttons[2].classList.add('active');
+                document.getElementById('practice4-tab').classList.add('active');
+                refreshPractice4Data();
+            } else if (tabName === 'practice5') {
+                buttons[3].classList.add('active');
+                document.getElementById('practice5-tab').classList.add('active');
+                refreshPractice5Data();
             }
         }
 
@@ -879,6 +968,183 @@
             } catch (error) {
                 document.body.removeChild(wallboardDiv);
                 console.error('이미지 생성 오류:', error);
+                alert('이미지 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 실습 4 관리 함수들 (STORAGE_KEY는 이미 위에서 정의됨)
+
+        function loadPractice4Data() {
+            const data = localStorage.getItem(PRACTICE4_STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return { notes: [], lastUpdate: Date.now() };
+        }
+
+        function refreshPractice4Data() {
+            const data = loadPractice4Data();
+            const notes = data.notes || [];
+            
+            document.getElementById('practice4NoteCount').textContent = notes.length;
+            const uniqueParticipants = new Set(notes.map(note => note.userId));
+            document.getElementById('practice4ParticipantCount').textContent = uniqueParticipants.size;
+            
+            const container = document.getElementById('practice4NoteList');
+            if (notes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>';
+            } else {
+                const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
+                container.innerHTML = sortedNotes.map((note, index) => {
+                    const date = new Date(note.timestamp);
+                    return `
+                        <div class="word-item">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                                <span class="word-text">#${index + 1} - ${note.userName || '익명'}</span>
+                                <span style="color: #999; font-size: 0.9em;">${date.toLocaleString('ko-KR')}</span>
+                            </div>
+                            <div style="background: ${note.color || '#fff'}; padding: 15px; border-radius: 10px; width: 100%; margin-top: 10px;">
+                                <div style="color: #333;">${note.content.replace(/\n/g, '<br>')}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            if (data.lastUpdate) {
+                const date = new Date(data.lastUpdate);
+                document.getElementById('practice4LastUpdateTime').textContent = date.toLocaleString('ko-KR');
+            }
+        }
+
+        function exportPractice4Data() {
+            const data = loadPractice4Data();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `practice4_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('데이터가 내보내졌습니다!');
+        }
+
+        function clearPractice4Data() {
+            if (confirm('정말로 실습 4의 모든 메모를 삭제하시겠습니까?')) {
+                const data = { notes: [], lastUpdate: Date.now() };
+                localStorage.setItem(PRACTICE4_STORAGE_KEY, JSON.stringify(data));
+                refreshPractice4Data();
+                alert('모든 데이터가 삭제되었습니다.');
+            }
+        }
+
+        async function downloadPractice4Image() {
+            const container = document.getElementById('practice4NoteList');
+            try {
+                const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2 });
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `practice4_image_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            } catch (error) {
+                alert('이미지 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 실습 5 관리 함수들 (STORAGE_KEY는 이미 위에서 정의됨)
+
+        function loadPractice5Data() {
+            const data = localStorage.getItem(PRACTICE5_STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+            return { reflections: [], lastUpdate: Date.now() };
+        }
+
+        function refreshPractice5Data() {
+            const data = loadPractice5Data();
+            const reflections = data.reflections || [];
+            
+            document.getElementById('practice5RecordCount').textContent = reflections.length;
+            const uniqueParticipants = new Set(reflections.map(r => r.userId));
+            document.getElementById('practice5ParticipantCount').textContent = uniqueParticipants.size;
+            
+            const container = document.getElementById('practice5ReflectionList');
+            if (reflections.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>';
+            } else {
+                const sortedReflections = [...reflections].sort((a, b) => b.timestamp - a.timestamp);
+                container.innerHTML = sortedReflections.map((reflection, index) => {
+                    const date = new Date(reflection.timestamp);
+                    return `
+                        <div class="word-item" style="flex-direction: column; align-items: flex-start;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+                                <span class="word-text">#${index + 1} - ${reflection.userName || '익명'}</span>
+                                <span style="color: #999; font-size: 0.9em;">${date.toLocaleString('ko-KR')}</span>
+                            </div>
+                            <div style="background: #ffebee; padding: 10px; border-radius: 5px; width: 100%; margin-bottom: 5px;">
+                                <strong>사실:</strong> ${reflection.fact.replace(/\n/g, '<br>')}
+                            </div>
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; width: 100%;">
+                                <strong>해석/성찰:</strong> ${reflection.reflection.replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            if (data.lastUpdate) {
+                const date = new Date(data.lastUpdate);
+                document.getElementById('practice5LastUpdateTime').textContent = date.toLocaleString('ko-KR');
+            }
+        }
+
+        function exportPractice5Data() {
+            const data = loadPractice5Data();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `practice5_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('데이터가 내보내졌습니다!');
+        }
+
+        function clearPractice5Data() {
+            if (confirm('정말로 실습 5의 모든 성찰 기록을 삭제하시겠습니까?')) {
+                const data = { reflections: [], lastUpdate: Date.now() };
+                localStorage.setItem(PRACTICE5_STORAGE_KEY, JSON.stringify(data));
+                refreshPractice5Data();
+                alert('모든 데이터가 삭제되었습니다.');
+            }
+        }
+
+        async function downloadPractice5Image() {
+            const container = document.getElementById('practice5ReflectionList');
+            try {
+                const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2 });
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `practice5_image_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            } catch (error) {
                 alert('이미지 생성 중 오류가 발생했습니다.');
             }
         }

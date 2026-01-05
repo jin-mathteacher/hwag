@@ -370,7 +370,8 @@
         </div>
 
         <div style="margin-top: 30px; text-align: center;">
-            <button class="btn btn-export" onclick="exportAllData()" style="padding: 15px 30px; font-size: 1.1em;">전체 데이터 내보내기</button>
+            <button class="btn btn-export" onclick="exportAllData()" style="padding: 15px 30px; font-size: 1.1em; margin-right: 10px;">전체 데이터 내보내기 (JSON)</button>
+            <button class="btn btn-export" onclick="exportAllDataToExcel()" style="padding: 15px 30px; font-size: 1.1em; background: #4caf50;">전체 데이터 내보내기 (엑셀/CSV)</button>
         </div>
     </div>
 
@@ -544,6 +545,15 @@
                     const practice2Count = data?.practice2 ? (data.practice2.notes?.length || 0) : 0;
                     const studentCount = cls.students ? cls.students.length : 0;
                     
+                    const studentsList = cls.students && cls.students.length > 0 
+                        ? cls.students.map((student, idx) => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; background: #f8f9fa; border-radius: 3px; margin-bottom: 3px;">
+                                <span style="font-size: 0.9em;">${student.name || '익명'} (${student.id || 'N/A'})</span>
+                                <button class="btn btn-delete" style="padding: 3px 8px; font-size: 0.8em;" onclick="deleteStudentFromAdmin('${teacher.username}', '${cls.id}', '${student.id}')">삭제</button>
+                            </div>
+                        `).join('')
+                        : '<p style="color: #999; font-size: 0.9em; padding: 5px;">수강생이 없습니다.</p>';
+                    
                     return `
                         <div class="class-item">
                             <div>
@@ -551,6 +561,14 @@
                                 ${cls.description ? '<br><small style="color: #666;">' + cls.description + '</small>' : ''}
                                 <br><small style="color: #999;">수강생: ${studentCount}명 | 실습1: ${practice1Count}개 | 실습2: ${practice2Count}개</small>
                                 <br><small style="color: #999;">등록 코드: ${cls.code || 'N/A'}</small>
+                                ${studentCount > 0 ? `
+                                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+                                        <strong style="font-size: 0.9em; color: #667eea;">수강생 목록:</strong>
+                                        <div style="max-height: 150px; overflow-y: auto; margin-top: 5px;">
+                                            ${studentsList}
+                                        </div>
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="action-buttons">
                                 <button class="btn btn-admin" onclick="viewAdminPage('${cls.id}', '${cls.name}')">관리자 페이지</button>
@@ -639,11 +657,113 @@
             alert('전체 데이터가 내보내졌습니다!');
         }
 
+        function exportAllDataToExcel() {
+            const teachers = getAllTeachers();
+            let csvContent = '\uFEFF'; // UTF-8 BOM for Excel
+            
+            // 헤더
+            csvContent += '강사명,클래스명,클래스ID,등록코드,수강생수,실습1_참여자수,실습1_총단어수,실습1_고유단어수,실습1_최빈단어,실습2_카드수,실습2_참여자수,실습4_메모수,실습4_참여자수,실습5_기록수,실습5_참여자수\n';
+            
+            teachers.forEach(teacher => {
+                teacher.classes.forEach(cls => {
+                    const classData = getClassData(cls.id);
+                    const practice1 = classData?.practice1 || {};
+                    const practice2 = classData?.practice2 || {};
+                    
+                    // 실습 4 데이터
+                    const practice4Data = localStorage.getItem(`wallboard_practice4_${cls.id}`);
+                    let practice4Notes = [];
+                    let practice4Participants = 0;
+                    if (practice4Data) {
+                        const parsed = JSON.parse(practice4Data);
+                        practice4Notes = parsed.notes || [];
+                        practice4Participants = new Set(practice4Notes.map(n => n.userId)).size;
+                    }
+                    
+                    // 실습 5 데이터
+                    const practice5Data = localStorage.getItem(`reflection_practice5_${cls.id}`);
+                    let practice5Reflections = [];
+                    let practice5Participants = 0;
+                    if (practice5Data) {
+                        const parsed = JSON.parse(practice5Data);
+                        practice5Reflections = parsed.reflections || [];
+                        practice5Participants = new Set(practice5Reflections.map(r => r.userId)).size;
+                    }
+                    
+                    const words = practice1.words || {};
+                    const wordCounts = Object.values(words);
+                    const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
+                    const uniqueWords = Object.keys(words).length;
+                    const topWord = Object.keys(words).reduce((a, b) => words[a] > words[b] ? a : b, '') || '-';
+                    const practice1Participants = practice1.participants ? practice1.participants.length : 0;
+                    const practice2Notes = practice2.notes || [];
+                    const practice2Participants = practice2.participants ? (Array.isArray(practice2.participants) ? practice2.participants.length : practice2.participants.size) : 0;
+                    
+                    const row = [
+                        escapeCSV(teacher.username),
+                        escapeCSV(cls.name),
+                        escapeCSV(cls.id),
+                        escapeCSV(cls.code || ''),
+                        cls.students ? cls.students.length : 0,
+                        practice1Participants,
+                        totalWords,
+                        uniqueWords,
+                        escapeCSV(topWord),
+                        practice2Notes.length,
+                        practice2Participants,
+                        practice4Notes.length,
+                        practice4Participants,
+                        practice5Reflections.length,
+                        practice5Participants
+                    ].join(',');
+                    
+                    csvContent += row + '\n';
+                });
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `all_data_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('전체 데이터가 CSV 형식으로 내보내졌습니다!');
+        }
+
+        function escapeCSV(str) {
+            if (str === null || str === undefined) return '';
+            str = String(str);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+
         function logout() {
             sessionStorage.removeItem('userSession');
         }
 
         // 강사 삭제 함수
+        function deleteStudentFromAdmin(teacherUsername, classId, studentId) {
+            if (!confirm('이 수강생을 삭제하시겠습니까?')) return;
+            
+            const teachers = getAllTeachers();
+            const teacher = teachers.find(t => t.username === teacherUsername);
+            if (!teacher) return;
+            
+            const cls = teacher.classes.find(c => c.id === classId);
+            if (!cls || !cls.students) return;
+            
+            cls.students = cls.students.filter(s => s.id !== studentId);
+            saveAllTeachers(teachers);
+            loadTeachers();
+            alert('수강생이 삭제되었습니다.');
+        }
+
         function deleteTeacher(username) {
             if (!confirm(`정말로 강사 "${username}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 해당 강사의 모든 클래스와 데이터가 삭제됩니다.`)) {
                 return;
@@ -677,8 +797,15 @@
         let currentModalClassId = null;
         let currentModalClassName = null;
 
-        // 관리자 페이지 보기
+        // 관리자 페이지 보기 (새 창에서 열기)
         function viewAdminPage(classId, className) {
+            // 새 창에서 관리자 페이지 열기 (클래스 ID를 쿼리 파라미터로 전달)
+            const url = `wordcloud-admin.html?classId=${encodeURIComponent(classId)}&className=${encodeURIComponent(className)}`;
+            window.open(url, '_blank', 'width=1400,height=800,scrollbars=yes');
+        }
+        
+        // 기존 모달 방식 (레거시 - 필요시 사용)
+        function viewAdminPageModal(classId, className) {
             currentModalClassId = classId;
             currentModalClassName = className;
             document.getElementById('modalClassName').textContent = className + ' - 관리자 페이지';

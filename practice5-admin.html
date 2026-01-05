@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지 - 실습 5 (성찰 기록 연습)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .back-button:hover {
+            background: #764ba2;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .admin-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        .image-btn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .admin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .reflection-list-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .reflection-list-section h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .reflection-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .reflection-item:hover {
+            transform: translateX(5px);
+        }
+
+        .reflection-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .reflection-item-header span {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .reflection-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .reflection-fact, .reflection-reflection {
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .reflection-fact {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+        }
+
+        .reflection-reflection {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+        }
+
+        .reflection-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .last-update {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 968px) {
+            .reflection-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← 홈으로</a>
+        <a href="practice-5.html" class="back-button" style="margin-left: 10px;">실습 5로</a>
+        
+        <div class="header">
+            <h1>관리자 페이지</h1>
+            <p>실습 5 - 성찰 기록 연습</p>
+        </div>
+
+        <div class="admin-controls">
+            <button class="admin-btn refresh-btn" onclick="loadReflectionData()">🔄 새로고침</button>
+            <button class="admin-btn export-btn" onclick="exportData()">📥 데이터 내보내기</button>
+            <button class="admin-btn image-btn" onclick="downloadImage()">🖼️ 이미지 다운로드</button>
+            <button class="admin-btn clear-btn" onclick="clearAllData()">🗑️ 전체 삭제</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>총 기록 수</h3>
+                <div class="value" id="totalRecords">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>참여자 수</h3>
+                <div class="value" id="participantCount">0</div>
+            </div>
+        </div>
+
+        <div class="reflection-list-section">
+            <h2>📝 성찰 기록 목록</h2>
+            <div id="reflectionList">
+                <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>
+            </div>
+        </div>
+
+        <div class="last-update">
+            마지막 업데이트: <span id="lastUpdateTime">-</span>
+        </div>
+    </div>
+
+    <script>
+        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        if (!session.type || (session.type !== 'teacher' && session.type !== 'admin')) {
+            alert('관리자만 접근할 수 있습니다.');
+            window.location.href = 'index.html';
+        }
+
+        const CLASS_ID = session.classId || 'default';
+        const STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
+
+        function loadReflectionData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            let reflections = [];
+            
+            if (data) {
+                const parsed = JSON.parse(data);
+                reflections = parsed.reflections || [];
+            }
+
+            updateStats(reflections);
+            renderReflections(reflections);
+            updateLastUpdateTime();
+        }
+
+        function updateStats(reflections) {
+            document.getElementById('totalRecords').textContent = reflections.length;
+            
+            const uniqueParticipants = new Set(reflections.map(r => r.userId));
+            document.getElementById('participantCount').textContent = uniqueParticipants.size;
+        }
+
+        function renderReflections(reflections) {
+            const container = document.getElementById('reflectionList');
+            
+            if (reflections.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>';
+                return;
+            }
+
+            const sortedReflections = [...reflections].sort((a, b) => b.timestamp - a.timestamp);
+            
+            container.innerHTML = sortedReflections.map((reflection, index) => {
+                const date = new Date(reflection.timestamp);
+                const dateStr = date.toLocaleString('ko-KR');
+                
+                return `
+                    <div class="reflection-item">
+                        <div class="reflection-item-header">
+                            <span>#${index + 1} - ${reflection.userName || '익명'}</span>
+                            <span>${dateStr}</span>
+                        </div>
+                        <div class="reflection-content">
+                            <div class="reflection-fact">
+                                <div class="reflection-label">사실</div>
+                                <div>${reflection.fact.replace(/\n/g, '<br>')}</div>
+                            </div>
+                            <div class="reflection-reflection">
+                                <div class="reflection-label">해석/성찰</div>
+                                <div>${reflection.reflection.replace(/\n/g, '<br>')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateLastUpdateTime() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const parsed = JSON.parse(data);
+                if (parsed.lastUpdate) {
+                    const date = new Date(parsed.lastUpdate);
+                    document.getElementById('lastUpdateTime').textContent = date.toLocaleString('ko-KR');
+                }
+            }
+        }
+
+        function clearAllData() {
+            if (!confirm('모든 성찰 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+            
+            const data = {
+                reflections: [],
+                lastUpdate: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            
+            loadReflectionData();
+            alert('모든 데이터가 삭제되었습니다.');
+        }
+
+        function exportData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (!data) {
+                alert('내보낼 데이터가 없습니다.');
+                return;
+            }
+            
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `practice5_reflection_${CLASS_ID}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('데이터가 내보내졌습니다!');
+        }
+
+        async function downloadImage() {
+            const container = document.querySelector('.container');
+            try {
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#ffffff',
+                    scale: 2
+                });
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `practice5_admin_${CLASS_ID}_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            } catch (error) {
+                console.error('이미지 생성 오류:', error);
+                alert('이미지 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 초기화 및 주기적 업데이트
+        window.addEventListener('load', function() {
+            loadReflectionData();
+            
+            // 주기적 동기화
+            setInterval(function() {
+                loadReflectionData();
+            }, 2000);
+            
+            // 다른 탭에서의 변경사항 감지
+            window.addEventListener('storage', function(e) {
+                if (e.key === STORAGE_KEY) {
+                    loadReflectionData();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
