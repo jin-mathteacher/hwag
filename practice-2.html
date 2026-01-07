@@ -462,6 +462,13 @@
                     if (!error && supabaseData && supabaseData.data) {
                         // Supabase 데이터를 사용
                         const practiceData = supabaseData.data;
+                        
+                        // notes가 배열인지 확인
+                        if (!Array.isArray(practiceData.notes)) {
+                            console.warn('⚠️ practiceData.notes가 배열이 아닙니다. 빈 배열로 초기화합니다.');
+                            practiceData.notes = [];
+                        }
+                        
                         practiceData.participants = new Set(practiceData.participants || []);
                         
                         // localStorage에도 동기화
@@ -473,10 +480,13 @@
                         };
                         saveClassData(classData);
                         
+                        console.log('✅ Supabase에서 데이터 로드 성공:', practiceData);
                         return practiceData;
+                    } else if (error) {
+                        console.warn('⚠️ Supabase 데이터 로드 오류 (무시하고 localStorage 사용):', error);
                     }
                 } catch (error) {
-                    console.error('Supabase 데이터 로드 오류:', error);
+                    console.error('Supabase 데이터 로드 예외:', error);
                 }
             }
             
@@ -487,7 +497,15 @@
                 participants: [],
                 lastUpdate: Date.now()
             };
+            
+            // notes가 배열인지 확인
+            if (!Array.isArray(data.notes)) {
+                console.warn('⚠️ data.notes가 배열이 아닙니다. 빈 배열로 초기화합니다.');
+                data.notes = [];
+            }
+            
             data.participants = new Set(data.participants || []);
+            console.log('✅ localStorage에서 데이터 로드:', data);
             return data;
         }
 
@@ -610,14 +628,20 @@
                 return;
             }
 
+            console.log('📝 카드 추가 시작:', adjective);
+
             // 자동으로 "나는 [형용사] 연구자다." 형태로 변환
             const content = `나는 <strong style="font-size: 1.2em; color: #667eea;">${adjective}</strong> 연구자다.`;
 
             const data = await loadWallboardData();
+            console.log('📋 로드된 데이터:', data);
+            console.log('📋 기존 카드 수:', data.notes ? data.notes.length : 0);
+            
             data.participants.add(userId);
 
             // 겹치지 않는 위치 계산
             const position = calculateCardPosition(data.notes);
+            console.log('📍 계산된 위치:', position);
 
             const note = {
                 id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -629,13 +653,21 @@
                 timestamp: Date.now()
             };
 
+            console.log('📌 생성된 카드:', note);
+
             data.notes.push(note);
             data.lastUpdate = Date.now();
+            
+            console.log('💾 저장 전 카드 수:', data.notes.length);
             await saveWallboardData(data);
+            console.log('✅ 저장 완료');
 
             input.value = '';
-            renderNotes();
-            updateStats();
+            
+            console.log('🔄 화면 업데이트 시작');
+            await renderNotes();
+            await updateStats();
+            console.log('✅ 화면 업데이트 완료');
         }
 
         // 이미지 처리
@@ -645,12 +677,19 @@
                 if (items[i].type.indexOf('image') !== -1) {
                     const blob = items[i].getAsFile();
                     const reader = new FileReader();
-                    reader.onload = function(event) {
+                    reader.onload = async function(event) {
                         const img = document.createElement('img');
                         img.src = event.target.result;
                         img.style.maxWidth = '100%';
                         
                         const data = await loadWallboardData();
+                        
+                        // notes가 배열인지 확인
+                        if (!Array.isArray(data.notes)) {
+                            console.warn('⚠️ data.notes가 배열이 아닙니다. 초기화합니다.');
+                            data.notes = [];
+                        }
+                        
                         data.participants.add(userId);
 
                         // 겹치지 않는 위치 계산
@@ -682,32 +721,57 @@
 
         // 카드 렌더링
         async function renderNotes() {
+            console.log('🎨 renderNotes() 시작');
             const wallboard = document.getElementById('wallboard');
+            
+            if (!wallboard) {
+                console.error('❌ wallboard 요소를 찾을 수 없습니다!');
+                return;
+            }
+            
             const data = await loadWallboardData();
+            console.log('📋 렌더링할 데이터:', data);
+            console.log('📋 카드 개수:', data.notes ? data.notes.length : 0);
             
             wallboard.innerHTML = '';
             
             // 수강생은 자신이 작성한 카드만 보이도록 필터링
-            let visibleNotes = data.notes;
+            let visibleNotes = data.notes || [];
             if (session.type === 'student') {
-                visibleNotes = data.notes.filter(note => note.userId === userId);
+                visibleNotes = visibleNotes.filter(note => note.userId === userId);
             }
             
-            visibleNotes.forEach(note => {
+            console.log('👁️ 표시할 카드 수:', visibleNotes.length);
+            
+            if (visibleNotes.length === 0) {
+                console.log('⚠️ 표시할 카드가 없습니다.');
+            }
+            
+            visibleNotes.forEach((note, index) => {
+                console.log(`📌 카드 ${index + 1} 렌더링:`, note);
                 const noteElement = createNoteElement(note);
                 wallboard.appendChild(noteElement);
             });
+            
+            console.log('✅ renderNotes() 완료');
         }
 
         // 카드 요소 생성
         function createNoteElement(note) {
+            console.log('🎨 카드 요소 생성:', note);
             const noteDiv = document.createElement('div');
             noteDiv.className = 'note-card';
             noteDiv.id = note.id;
-            noteDiv.style.left = note.x + 'px';
-            noteDiv.style.top = note.y + 'px';
-            noteDiv.style.backgroundColor = note.color;
+            
+            // 위치 설정 (유효성 검사)
+            const x = Math.max(0, note.x || 20);
+            const y = Math.max(0, note.y || 20);
+            noteDiv.style.left = x + 'px';
+            noteDiv.style.top = y + 'px';
+            noteDiv.style.backgroundColor = note.color || '#fff3cd';
             noteDiv.draggable = false;
+            
+            console.log('📍 카드 위치:', { x, y, id: note.id });
 
             // 본인 작성 표기 (수강생인 경우)
             const isOwnNote = note.userId === userId;
@@ -772,7 +836,7 @@
                 draggedElement.style.top = y + 'px';
             });
 
-            document.addEventListener('mouseup', function() {
+            document.addEventListener('mouseup', async function() {
                 if (draggedElement) {
                     draggedElement.classList.remove('dragging');
                     
