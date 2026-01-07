@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실습 5 - 성찰 기록 연습</title>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -225,19 +228,28 @@
             padding: 20px;
             margin-top: 20px;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+            overflow: auto;
         }
 
         .reflection-card {
             position: absolute;
-            min-width: 280px;
-            max-width: 400px;
+            width: 320px;
+            min-height: 180px;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            cursor: move;
             word-wrap: break-word;
             z-index: 10;
             background: white;
+        }
+        
+        /* 강사/관리자만 드래그 가능 */
+        .reflection-card.draggable {
+            cursor: move;
+        }
+        
+        .reflection-card:not(.draggable) {
+            cursor: default;
         }
 
         .reflection-card:hover {
@@ -418,12 +430,64 @@
 
         const CLASS_ID = session.classId || 'default';
         const STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
+        const PRACTICE_TYPE = 'practice5';
+        const SYNC_INTERVAL = 2000;
         const userId = session.id || 'anonymous_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        // Supabase 클라이언트 가져오기
+        function getSupabaseClient() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabase !== 'undefined') {
+                const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        // Supabase Realtime 구독 변수
+        let realtimeSubscription = null;
 
         // 로드 시 데이터 불러오기
         loadReflectionData();
 
-        function loadReflectionData() {
+        async function loadReflectionData() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', PRACTICE_TYPE)
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        reflections = practiceData.reflections || [];
+                        
+                        // localStorage에도 동기화
+                        const data = {
+                            reflections: reflections,
+                            lastUpdate: practiceData.lastUpdate || Date.now()
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                        
+                        renderReflections();
+                        updateStats();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const data = localStorage.getItem(STORAGE_KEY);
             if (data) {
                 const parsed = JSON.parse(data);
@@ -433,15 +497,101 @@
             updateStats();
         }
 
-        function saveReflectionData() {
+        async function saveReflectionData() {
             const data = {
                 reflections: reflections,
                 lastUpdate: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            
+            // Supabase에 저장
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const practiceData = {
+                        reflections: reflections,
+                        lastUpdate: Date.now()
+                    };
+                    
+                    // UPSERT: 있으면 업데이트, 없으면 삽입
+                    const { error } = await supabaseClient
+                        .from('practice_data')
+                        .upsert({
+                            class_id: CLASS_ID,
+                            practice_type: PRACTICE_TYPE,
+                            data: practiceData
+                        }, {
+                            onConflict: 'class_id,practice_type'
+                        });
+                    
+                    if (error) {
+                        console.error('Supabase 저장 오류:', error);
+                    } else {
+                        console.log('✅ Supabase에 데이터 저장 성공');
+                    }
+                } catch (error) {
+                    console.error('Supabase 저장 예외:', error);
+                }
+            }
         }
 
-        function addReflection() {
+        // 카드 위치 계산 (겹치지 않게 배치)
+        function calculateCardPosition(existingReflections) {
+            const CARD_WIDTH = 320;
+            const CARD_HEIGHT = 200;
+            const PADDING = 20;
+            
+            // 실제 wallboard 크기 가져오기
+            const wallboard = document.getElementById('wallboard');
+            if (!wallboard) {
+                return { x: PADDING, y: PADDING };
+            }
+            
+            const wallboardRect = wallboard.getBoundingClientRect();
+            const WALLBOARD_WIDTH = wallboardRect.width - (PADDING * 2);
+            const WALLBOARD_HEIGHT = wallboardRect.height - (PADDING * 2);
+            
+            const cols = Math.max(1, Math.floor((WALLBOARD_WIDTH) / (CARD_WIDTH + PADDING)));
+            const rows = Math.max(1, Math.floor((WALLBOARD_HEIGHT) / (CARD_HEIGHT + PADDING)));
+            
+            // 기존 카드 위치를 그리드 좌표로 변환
+            const occupied = new Set();
+            existingReflections.forEach(reflection => {
+                const col = Math.floor((reflection.x - PADDING) / (CARD_WIDTH + PADDING));
+                const row = Math.floor((reflection.y - PADDING) / (CARD_HEIGHT + PADDING));
+                if (col >= 0 && row >= 0) {
+                    occupied.add(`${col},${row}`);
+                }
+            });
+            
+            // 빈 자리 찾기
+            for (let row = 0; row < rows * 10; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const key = `${col},${row}`;
+                    if (!occupied.has(key)) {
+                        const x = col * (CARD_WIDTH + PADDING) + PADDING;
+                        const y = row * (CARD_HEIGHT + PADDING) + PADDING;
+                        if (x + CARD_WIDTH <= WALLBOARD_WIDTH + PADDING) {
+                            return { x, y };
+                        }
+                    }
+                }
+            }
+            
+            // 모든 자리가 차면 마지막 카드 아래에 추가
+            if (existingReflections.length > 0) {
+                const lastReflection = existingReflections[existingReflections.length - 1];
+                return {
+                    x: PADDING,
+                    y: lastReflection.y + CARD_HEIGHT + PADDING
+                };
+            }
+            
+            // 첫 번째 카드
+            return { x: PADDING, y: PADDING };
+        }
+
+        async function addReflection() {
             const factInput = document.getElementById('factInput');
             const reflectionInput = document.getElementById('reflectionInput');
             
@@ -453,6 +603,9 @@
                 return;
             }
 
+            // 겹치지 않는 위치 계산
+            const position = calculateCardPosition(reflections);
+
             const reflectionCard = {
                 id: 'reflection_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 fact: fact,
@@ -460,12 +613,12 @@
                 userId: userId,
                 userName: session.name || session.username || '익명',
                 timestamp: Date.now(),
-                x: Math.random() * (window.innerWidth - 500) + 50,
-                y: Math.random() * 300 + 100
+                x: position.x,
+                y: position.y
             };
 
             reflections.push(reflectionCard);
-            saveReflectionData();
+            await saveReflectionData();
             renderReflections();
             updateStats();
             
@@ -526,8 +679,11 @@
                     </div>
                 `;
                 
-                // 드래그 이벤트
-                card.addEventListener('mousedown', startDrag);
+                // 강사/관리자만 드래그 가능 (위치 고정을 위해 일반 사용자는 드래그 불가)
+                if (session.type === 'teacher' || session.type === 'admin') {
+                    card.classList.add('draggable');
+                    card.addEventListener('mousedown', startDrag);
+                }
                 
                 wallboard.appendChild(card);
             });
@@ -568,7 +724,7 @@
             currentCard.style.top = y + 'px';
         }
 
-        function stopDrag() {
+        async function stopDrag() {
             if (currentCard) {
                 const reflectionId = currentCard.id;
                 const reflection = reflections.find(r => r.id === reflectionId);
@@ -579,7 +735,7 @@
                     
                     reflection.x = cardRect.left - wallboardRect.left;
                     reflection.y = cardRect.top - wallboardRect.top;
-                    saveReflectionData();
+                    await saveReflectionData();
                 }
                 currentCard.style.zIndex = 10;
             }
@@ -590,7 +746,7 @@
             document.removeEventListener('mouseup', stopDrag);
         }
 
-        function deleteReflection(reflectionId) {
+        async function deleteReflection(reflectionId) {
             const reflectionToDelete = reflections.find(r => r.id === reflectionId);
             if (!reflectionToDelete) {
                 alert('해당 성찰 기록을 찾을 수 없습니다.');
@@ -606,7 +762,7 @@
             if (!confirm('이 성찰 기록을 삭제하시겠습니까?')) return;
             
             reflections = reflections.filter(r => r.id !== reflectionId);
-            saveReflectionData();
+            await saveReflectionData();
             renderReflections();
             updateStats();
         }
@@ -624,6 +780,71 @@
             const participants = new Set(visibleReflections.map(r => r.userId));
             document.getElementById('participantCount').textContent = participants.size;
         }
+
+        // Supabase Realtime 구독 설정
+        function setupRealtimeSubscription() {
+            const supabaseClient = getSupabaseClient();
+            if (!supabaseClient) {
+                console.warn('Supabase 클라이언트를 사용할 수 없습니다.');
+                return;
+            }
+
+            // 기존 구독이 있으면 해제
+            if (realtimeSubscription) {
+                supabaseClient.removeChannel(realtimeSubscription);
+            }
+
+            // Realtime 구독 시작
+            realtimeSubscription = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_${PRACTICE_TYPE}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // INSERT, UPDATE, DELETE 모두 감지
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.${PRACTICE_TYPE}`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실시간 업데이트 수신:', payload);
+                        // 데이터 새로고침
+                        await loadReflectionData();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 Realtime 구독 상태:', status);
+                });
+        }
+
+        // 초기화 및 주기적 업데이트
+        window.addEventListener('load', async function() {
+            await loadReflectionData();
+            
+            // Supabase Realtime 구독 설정
+            setupRealtimeSubscription();
+            
+            // 주기적으로 동기화 (Realtime이 실패할 경우를 대비)
+            setInterval(async function() {
+                await loadReflectionData();
+            }, SYNC_INTERVAL);
+            
+            // 다른 탭에서의 변경사항 감지 (localStorage 백업)
+            window.addEventListener('storage', async function(e) {
+                if (e.key === STORAGE_KEY) {
+                    await loadReflectionData();
+                }
+            });
+        });
+
+        // 페이지 언로드 시 구독 해제
+        window.addEventListener('beforeunload', function() {
+            if (realtimeSubscription) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    supabaseClient.removeChannel(realtimeSubscription);
+                }
+            }
+        });
 
         // Enter 키로 제출 (Ctrl+Enter)
         document.getElementById('factInput').addEventListener('keydown', function(e) {

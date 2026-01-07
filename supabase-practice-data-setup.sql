@@ -20,7 +20,7 @@ DROP TABLE IF EXISTS public.practice_data CASCADE;
 CREATE TABLE public.practice_data (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     class_id TEXT NOT NULL,
-    practice_type TEXT NOT NULL CHECK (practice_type IN ('practice1', 'practice2')),
+    practice_type TEXT NOT NULL CHECK (practice_type IN ('practice1', 'practice2', 'practice5')),
     data JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

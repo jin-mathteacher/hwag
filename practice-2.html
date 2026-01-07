@@ -188,16 +188,24 @@
 
         .note-card {
             position: absolute;
-            min-width: 200px;
-            max-width: 400px;
+            width: 250px;
+            min-height: 120px;
             background: white;
             border-radius: 10px;
             padding: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            cursor: move;
             user-select: none;
-            transition: box-shadow 0.3s ease, transform 0.1s ease;
+            transition: box-shadow 0.3s ease;
             z-index: 10;
+        }
+        
+        /* 강사/관리자만 드래그 가능 */
+        .note-card.draggable {
+            cursor: move;
+        }
+        
+        .note-card:not(.draggable) {
+            cursor: default;
         }
 
         .note-card:hover {
@@ -534,6 +542,64 @@
             document.querySelector(`[data-color="${color}"]`).classList.add('selected');
         }
 
+        // 카드 위치 계산 (겹치지 않게 배치)
+        function calculateCardPosition(existingNotes) {
+            const CARD_WIDTH = 250;
+            const CARD_HEIGHT = 150;
+            const PADDING = 20;
+            
+            // 실제 wallboard 크기 가져오기
+            const wallboard = document.getElementById('wallboard');
+            if (!wallboard) {
+                // wallboard가 아직 없으면 기본값 사용
+                return { x: PADDING, y: PADDING };
+            }
+            
+            const wallboardRect = wallboard.getBoundingClientRect();
+            const WALLBOARD_WIDTH = wallboardRect.width - (PADDING * 2);
+            const WALLBOARD_HEIGHT = wallboardRect.height - (PADDING * 2);
+            
+            const cols = Math.max(1, Math.floor((WALLBOARD_WIDTH) / (CARD_WIDTH + PADDING)));
+            const rows = Math.max(1, Math.floor((WALLBOARD_HEIGHT) / (CARD_HEIGHT + PADDING)));
+            
+            // 기존 카드 위치를 그리드 좌표로 변환
+            const occupied = new Set();
+            existingNotes.forEach(note => {
+                const col = Math.floor((note.x - PADDING) / (CARD_WIDTH + PADDING));
+                const row = Math.floor((note.y - PADDING) / (CARD_HEIGHT + PADDING));
+                if (col >= 0 && row >= 0) {
+                    occupied.add(`${col},${row}`);
+                }
+            });
+            
+            // 빈 자리 찾기
+            for (let row = 0; row < rows * 10; row++) { // 충분한 행 확보
+                for (let col = 0; col < cols; col++) {
+                    const key = `${col},${row}`;
+                    if (!occupied.has(key)) {
+                        const x = col * (CARD_WIDTH + PADDING) + PADDING;
+                        const y = row * (CARD_HEIGHT + PADDING) + PADDING;
+                        // 경계 체크
+                        if (x + CARD_WIDTH <= WALLBOARD_WIDTH + PADDING) {
+                            return { x, y };
+                        }
+                    }
+                }
+            }
+            
+            // 모든 자리가 차면 마지막 카드 아래에 추가
+            if (existingNotes.length > 0) {
+                const lastNote = existingNotes[existingNotes.length - 1];
+                return {
+                    x: PADDING,
+                    y: lastNote.y + CARD_HEIGHT + PADDING
+                };
+            }
+            
+            // 첫 번째 카드
+            return { x: PADDING, y: PADDING };
+        }
+
         // 연구자 카드 추가
         async function addResearcherCard() {
             const input = document.getElementById('researcherInput');
@@ -550,12 +616,15 @@
             const data = await loadWallboardData();
             data.participants.add(userId);
 
+            // 겹치지 않는 위치 계산
+            const position = calculateCardPosition(data.notes);
+
             const note = {
                 id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 content: content,
                 color: selectedColor,
-                x: Math.random() * 300 + 50,
-                y: Math.random() * 200 + 50,
+                x: position.x,
+                y: position.y,
                 userId: userId,
                 timestamp: Date.now()
             };
@@ -584,12 +653,15 @@
                         const data = await loadWallboardData();
                         data.participants.add(userId);
 
+                        // 겹치지 않는 위치 계산
+                        const position = calculateCardPosition(data.notes);
+
                         const note = {
                             id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                             content: `<img src="${event.target.result}" alt="붙여넣은 이미지">`,
                             color: selectedColor,
-                            x: Math.random() * 300 + 50,
-                            y: Math.random() * 200 + 50,
+                            x: position.x,
+                            y: position.y,
                             userId: userId,
                             timestamp: Date.now()
                         };
@@ -658,8 +730,11 @@
                 <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
             `;
 
-            // 드래그 기능 추가
-            makeDraggable(noteDiv, note.id);
+            // 강사/관리자만 드래그 가능 (위치 고정을 위해 일반 사용자는 드래그 불가)
+            if (session.type === 'teacher' || session.type === 'admin') {
+                noteDiv.classList.add('draggable');
+                makeDraggable(noteDiv, note.id);
+            }
 
             return noteDiv;
         }

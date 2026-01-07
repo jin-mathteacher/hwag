@@ -523,7 +523,7 @@
             } else if (tabName === 'practice5') {
                 buttons[3].classList.add('active');
                 document.getElementById('practice5-tab').classList.add('active');
-                refreshPractice5Data();
+                await refreshPractice5Data();
             }
         }
 
@@ -798,6 +798,29 @@
                 .subscribe((status) => {
                     console.log('📡 실습 2 Realtime 구독 상태:', status);
                 });
+
+            // 실습 5 구독
+            if (realtimeSubscription5) {
+                supabaseClient.removeChannel(realtimeSubscription5);
+            }
+            realtimeSubscription5 = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_practice5`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice5`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실습 5 실시간 업데이트 수신:', payload);
+                        await refreshPractice5Data();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 실습 5 Realtime 구독 상태:', status);
+                });
         }
 
         // 초기화 및 주기적 업데이트
@@ -813,6 +836,8 @@
                     await refreshData();
                 } else if (document.getElementById('practice2-tab').classList.contains('active')) {
                     await refreshWallboardData();
+                } else if (document.getElementById('practice5-tab').classList.contains('active')) {
+                    await refreshPractice5Data();
                 }
             }, SYNC_INTERVAL);
             
@@ -837,6 +862,9 @@
                 }
                 if (realtimeSubscription2) {
                     supabaseClient.removeChannel(realtimeSubscription2);
+                }
+                if (realtimeSubscription5) {
+                    supabaseClient.removeChannel(realtimeSubscription5);
                 }
             }
         });
@@ -1258,7 +1286,33 @@
 
         // 실습 5 관리 함수들 (STORAGE_KEY는 이미 위에서 정의됨)
 
-        function loadPractice5Data() {
+        async function loadPractice5Data() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', 'practice5')
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        
+                        // localStorage에도 동기화
+                        localStorage.setItem(PRACTICE5_STORAGE_KEY, JSON.stringify(practiceData));
+                        
+                        return practiceData;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const data = localStorage.getItem(PRACTICE5_STORAGE_KEY);
             if (data) {
                 return JSON.parse(data);
@@ -1266,8 +1320,8 @@
             return { reflections: [], lastUpdate: Date.now() };
         }
 
-        function refreshPractice5Data() {
-            const data = loadPractice5Data();
+        async function refreshPractice5Data() {
+            const data = await loadPractice5Data();
             const reflections = data.reflections || [];
             
             document.getElementById('practice5RecordCount').textContent = reflections.length;
@@ -1304,8 +1358,8 @@
             }
         }
 
-        function exportPractice5Data() {
-            const data = loadPractice5Data();
+        async function exportPractice5Data() {
+            const data = await loadPractice5Data();
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1318,11 +1372,30 @@
             alert('데이터가 내보내졌습니다!');
         }
 
-        function clearPractice5Data() {
+        async function clearPractice5Data() {
             if (confirm('정말로 실습 5의 모든 성찰 기록을 삭제하시겠습니까?')) {
                 const data = { reflections: [], lastUpdate: Date.now() };
                 localStorage.setItem(PRACTICE5_STORAGE_KEY, JSON.stringify(data));
-                refreshPractice5Data();
+                
+                // Supabase에도 저장
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        await supabaseClient
+                            .from('practice_data')
+                            .upsert({
+                                class_id: CLASS_ID,
+                                practice_type: 'practice5',
+                                data: data
+                            }, {
+                                onConflict: 'class_id,practice_type'
+                            });
+                    } catch (error) {
+                        console.error('Supabase 초기화 오류:', error);
+                    }
+                }
+                
+                await refreshPractice5Data();
                 alert('모든 데이터가 삭제되었습니다.');
             }
         }
