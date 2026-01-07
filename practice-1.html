@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실습 1 - 워드크라우드</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -265,6 +268,21 @@
         const STORAGE_KEY = `class_data_${CLASS_ID}`;
         const USER_ID_KEY = `user_id_${CLASS_ID}`;
         const SYNC_INTERVAL = 2000; // 2초마다 동기화
+        const PRACTICE_TYPE = 'practice1';
+
+        // Supabase 클라이언트 가져오기
+        function getSupabaseClient() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabase !== 'undefined') {
+                const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
 
         // 사용자 ID 생성 (없으면 생성)
         let userId = localStorage.getItem(USER_ID_KEY);
@@ -272,6 +290,9 @@
             userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem(USER_ID_KEY, userId);
         }
+
+        // Supabase Realtime 구독 변수
+        let realtimeSubscription = null;
 
         // 워드크라우드 데이터 구조 (클래스별 분리)
         function getClassData() {
@@ -306,7 +327,7 @@
             };
         }
 
-        function saveWordCloudData(data) {
+        async function saveWordCloudData(data) {
             const classData = getClassData();
             classData.practice1 = {
                 words: data.words,
@@ -314,17 +335,80 @@
                 lastUpdate: data.lastUpdate
             };
             saveClassData(classData);
+            
+            // Supabase에 저장
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const practiceData = {
+                        words: data.words,
+                        participants: Array.from(data.participants),
+                        lastUpdate: data.lastUpdate
+                    };
+                    
+                    // UPSERT: 있으면 업데이트, 없으면 삽입
+                    const { error } = await supabaseClient
+                        .from('practice_data')
+                        .upsert({
+                            class_id: CLASS_ID,
+                            practice_type: PRACTICE_TYPE,
+                            data: practiceData
+                        }, {
+                            onConflict: 'class_id,practice_type'
+                        });
+                    
+                    if (error) {
+                        console.error('Supabase 저장 오류:', error);
+                    } else {
+                        console.log('✅ Supabase에 데이터 저장 성공');
+                    }
+                } catch (error) {
+                    console.error('Supabase 저장 예외:', error);
+                }
+            }
         }
 
-        function loadWordCloudData() {
+        async function loadWordCloudData() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', PRACTICE_TYPE)
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        practiceData.participants = new Set(practiceData.participants || []);
+                        
+                        // localStorage에도 동기화
+                        const classData = getClassData();
+                        classData.practice1 = {
+                            words: practiceData.words || {},
+                            participants: Array.from(practiceData.participants || []),
+                            lastUpdate: practiceData.lastUpdate || Date.now()
+                        };
+                        saveClassData(classData);
+                        
+                        return practiceData;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const data = getWordCloudData();
-            // 배열을 Set으로 변환
             data.participants = new Set(data.participants || []);
             return data;
         }
 
         // 단어 추가 함수
-        function addWord() {
+        async function addWord() {
             const input = document.getElementById('wordInput');
             const word = input.value.trim().toLowerCase();
             
@@ -339,7 +423,7 @@
             }
 
             // 데이터 가져오기
-            let data = loadWordCloudData();
+            let data = await loadWordCloudData();
             
             // 참여자 추가
             data.participants.add(userId);
@@ -359,7 +443,7 @@
                 participants: Array.from(data.participants),
                 lastUpdate: data.lastUpdate
             };
-            saveWordCloudData(dataToSave);
+            await saveWordCloudData(dataToSave);
             
             // 입력 필드 초기화
             input.value = '';
@@ -372,8 +456,8 @@
         }
 
         // 워드크라우드 업데이트
-        function updateWordCloud() {
-            const data = loadWordCloudData();
+        async function updateWordCloud() {
+            const data = await loadWordCloudData();
             const words = Object.keys(data.words);
             
             if (words.length === 0) {
@@ -411,8 +495,8 @@
         }
 
         // 통계 업데이트
-        function updateStats() {
-            const data = loadWordCloudData();
+        async function updateStats() {
+            const data = await loadWordCloudData();
             const totalWords = Object.values(data.words).reduce((sum, count) => sum + count, 0);
             const uniqueWords = Object.keys(data.words).length;
             
@@ -422,11 +506,44 @@
         }
 
         // 주기적 동기화 (다른 사용자의 입력 반영)
-        function syncData() {
-            // 실제 서버가 있다면 여기서 서버와 동기화
-            // 현재는 로컬스토리지 기반이므로 자동으로 공유됨
-            updateWordCloud();
-            updateStats();
+        async function syncData() {
+            await updateWordCloud();
+            await updateStats();
+        }
+
+        // Supabase Realtime 구독 설정
+        function setupRealtimeSubscription() {
+            const supabaseClient = getSupabaseClient();
+            if (!supabaseClient) {
+                console.warn('Supabase 클라이언트를 사용할 수 없습니다.');
+                return;
+            }
+
+            // 기존 구독이 있으면 해제
+            if (realtimeSubscription) {
+                supabaseClient.removeChannel(realtimeSubscription);
+            }
+
+            // Realtime 구독 시작
+            realtimeSubscription = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_${PRACTICE_TYPE}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // INSERT, UPDATE, DELETE 모두 감지
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.${PRACTICE_TYPE}`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실시간 업데이트 수신:', payload);
+                        // 데이터 새로고침
+                        await syncData();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 Realtime 구독 상태:', status);
+                });
         }
 
         // Enter 키로도 추가 가능
@@ -437,29 +554,42 @@
         });
 
         // 초기화 및 주기적 업데이트
-        window.addEventListener('load', function() {
-            updateWordCloud();
-            updateStats();
+        window.addEventListener('load', async function() {
+            await updateWordCloud();
+            await updateStats();
             
-            // 주기적으로 동기화
+            // Supabase Realtime 구독 설정
+            setupRealtimeSubscription();
+            
+            // 주기적으로 동기화 (Realtime이 실패할 경우를 대비)
             setInterval(syncData, SYNC_INTERVAL);
             
-            // 다른 탭에서의 변경사항 감지
-            window.addEventListener('storage', function(e) {
+            // 다른 탭에서의 변경사항 감지 (localStorage 백업)
+            window.addEventListener('storage', async function(e) {
                 if (e.key === STORAGE_KEY) {
-                    updateWordCloud();
-                    updateStats();
+                    await updateWordCloud();
+                    await updateStats();
                 }
             });
         });
 
+        // 페이지 언로드 시 구독 해제
+        window.addEventListener('beforeunload', function() {
+            if (realtimeSubscription) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    supabaseClient.removeChannel(realtimeSubscription);
+                }
+            }
+        });
+
         // 캔버스 크기 조정
-        function resizeCanvas() {
+        async function resizeCanvas() {
             const canvas = document.getElementById('wordcloud-canvas');
             const container = canvas.parentElement;
             canvas.width = container.clientWidth - 40;
             canvas.height = 300;
-            updateWordCloud();
+            await updateWordCloud();
         }
 
         window.addEventListener('resize', resizeCanvas);

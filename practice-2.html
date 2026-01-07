@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실습 2 - 담벼락</title>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -380,11 +383,26 @@
         const STORAGE_KEY = `class_data_${CLASS_ID}`;
         const USER_ID_KEY = `user_id_${CLASS_ID}`;
         const SYNC_INTERVAL = 2000;
+        const PRACTICE_TYPE = 'practice2';
         let selectedColor = '#fff3cd';
         let draggedElement = null;
         let offsetX = 0;
         let offsetY = 0;
         let noteIdCounter = 0;
+
+        // Supabase 클라이언트 가져오기
+        function getSupabaseClient() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabase !== 'undefined') {
+                const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
 
         // 사용자 ID 생성
         let userId = localStorage.getItem(USER_ID_KEY);
@@ -392,6 +410,9 @@
             userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem(USER_ID_KEY, userId);
         }
+
+        // Supabase Realtime 구독 변수
+        let realtimeSubscription = null;
 
         // 클래스 데이터 구조
         function getClassData() {
@@ -418,20 +439,52 @@
         }
 
         // 데이터 로드
-        function loadWallboardData() {
+        async function loadWallboardData() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', PRACTICE_TYPE)
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        practiceData.participants = new Set(practiceData.participants || []);
+                        
+                        // localStorage에도 동기화
+                        const classData = getClassData();
+                        classData.practice2 = {
+                            notes: practiceData.notes || [],
+                            participants: Array.from(practiceData.participants || []),
+                            lastUpdate: practiceData.lastUpdate || Date.now()
+                        };
+                        saveClassData(classData);
+                        
+                        return practiceData;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const classData = getClassData();
             const data = classData.practice2 || {
                 notes: [],
                 participants: [],
                 lastUpdate: Date.now()
             };
-            // 배열을 Set으로 변환
             data.participants = new Set(data.participants || []);
             return data;
         }
 
         // 데이터 저장
-        function saveWallboardData(data) {
+        async function saveWallboardData(data) {
             const classData = getClassData();
             classData.practice2 = {
                 notes: data.notes,
@@ -439,6 +492,37 @@
                 lastUpdate: data.lastUpdate
             };
             saveClassData(classData);
+            
+            // Supabase에 저장
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const practiceData = {
+                        notes: data.notes,
+                        participants: Array.from(data.participants),
+                        lastUpdate: data.lastUpdate
+                    };
+                    
+                    // UPSERT: 있으면 업데이트, 없으면 삽입
+                    const { error } = await supabaseClient
+                        .from('practice_data')
+                        .upsert({
+                            class_id: CLASS_ID,
+                            practice_type: PRACTICE_TYPE,
+                            data: practiceData
+                        }, {
+                            onConflict: 'class_id,practice_type'
+                        });
+                    
+                    if (error) {
+                        console.error('Supabase 저장 오류:', error);
+                    } else {
+                        console.log('✅ Supabase에 데이터 저장 성공');
+                    }
+                } catch (error) {
+                    console.error('Supabase 저장 예외:', error);
+                }
+            }
         }
 
         // 색상 선택
@@ -451,7 +535,7 @@
         }
 
         // 연구자 카드 추가
-        function addResearcherCard() {
+        async function addResearcherCard() {
             const input = document.getElementById('researcherInput');
             const adjective = input.value.trim();
             
@@ -463,7 +547,7 @@
             // 자동으로 "나는 [형용사] 연구자다." 형태로 변환
             const content = `나는 <strong style="font-size: 1.2em; color: #667eea;">${adjective}</strong> 연구자다.`;
 
-            const data = loadWallboardData();
+            const data = await loadWallboardData();
             data.participants.add(userId);
 
             const note = {
@@ -478,7 +562,7 @@
 
             data.notes.push(note);
             data.lastUpdate = Date.now();
-            saveWallboardData(data);
+            await saveWallboardData(data);
 
             input.value = '';
             renderNotes();
@@ -497,7 +581,7 @@
                         img.src = event.target.result;
                         img.style.maxWidth = '100%';
                         
-                        const data = loadWallboardData();
+                        const data = await loadWallboardData();
                         data.participants.add(userId);
 
                         const note = {
@@ -512,10 +596,10 @@
 
                         data.notes.push(note);
                         data.lastUpdate = Date.now();
-                        saveWallboardData(data);
+                        await saveWallboardData(data);
 
-                        renderNotes();
-                        updateStats();
+                        await renderNotes();
+                        await updateStats();
                     };
                     reader.readAsDataURL(blob);
                     e.preventDefault();
@@ -525,9 +609,9 @@
         }
 
         // 카드 렌더링
-        function renderNotes() {
+        async function renderNotes() {
             const wallboard = document.getElementById('wallboard');
-            const data = loadWallboardData();
+            const data = await loadWallboardData();
             
             wallboard.innerHTML = '';
             
@@ -618,7 +702,7 @@
                     draggedElement.classList.remove('dragging');
                     
                     // 위치 저장
-                    const data = loadWallboardData();
+                    const data = await loadWallboardData();
                     const note = data.notes.find(n => n.id === noteId);
                     if (note) {
                         const wallboard = document.getElementById('wallboard');
@@ -628,7 +712,7 @@
                         note.x = noteRect.left - wallboardRect.left;
                         note.y = noteRect.top - wallboardRect.top;
                         data.lastUpdate = Date.now();
-                        saveWallboardData(data);
+                        await saveWallboardData(data);
                     }
                     
                     draggedElement = null;
@@ -637,8 +721,8 @@
         }
 
         // 카드 삭제
-        function deleteNote(noteId) {
-            const data = loadWallboardData();
+        async function deleteNote(noteId) {
+            const data = await loadWallboardData();
             const note = data.notes.find(n => n.id === noteId);
             
             if (!note) {
@@ -657,28 +741,28 @@
             
             data.notes = data.notes.filter(n => n.id !== noteId);
             data.lastUpdate = Date.now();
-            saveWallboardData(data);
+            await saveWallboardData(data);
             
-            renderNotes();
-            updateStats();
+            await renderNotes();
+            await updateStats();
         }
 
         // 전체 삭제 (관리자 전용 - 관리자 페이지에서만 사용)
-        function clearAll() {
+        async function clearAll() {
             if (!confirm('모든 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
             
-            const data = loadWallboardData();
+            const data = await loadWallboardData();
             data.notes = [];
             data.lastUpdate = Date.now();
-            saveWallboardData(data);
+            await saveWallboardData(data);
             
-            renderNotes();
-            updateStats();
+            await renderNotes();
+            await updateStats();
         }
 
         // 통계 업데이트
-        function updateStats() {
-            const data = loadWallboardData();
+        async function updateStats() {
+            const data = await loadWallboardData();
             
             // 수강생은 자신의 카드만 카운트
             let visibleNotes = data.notes;
@@ -698,24 +782,73 @@
             handleImagePaste(e);
         });
 
+        // Supabase Realtime 구독 설정
+        function setupRealtimeSubscription() {
+            const supabaseClient = getSupabaseClient();
+            if (!supabaseClient) {
+                console.warn('Supabase 클라이언트를 사용할 수 없습니다.');
+                return;
+            }
+
+            // 기존 구독이 있으면 해제
+            if (realtimeSubscription) {
+                supabaseClient.removeChannel(realtimeSubscription);
+            }
+
+            // Realtime 구독 시작
+            realtimeSubscription = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_${PRACTICE_TYPE}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // INSERT, UPDATE, DELETE 모두 감지
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.${PRACTICE_TYPE}`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실시간 업데이트 수신:', payload);
+                        // 데이터 새로고침
+                        await renderNotes();
+                        await updateStats();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 Realtime 구독 상태:', status);
+                });
+        }
+
         // 초기화
-        window.addEventListener('load', function() {
-            renderNotes();
-            updateStats();
+        window.addEventListener('load', async function() {
+            await renderNotes();
+            await updateStats();
             
-            // 주기적 동기화
-            setInterval(function() {
-                renderNotes();
-                updateStats();
+            // Supabase Realtime 구독 설정
+            setupRealtimeSubscription();
+            
+            // 주기적 동기화 (Realtime이 실패할 경우를 대비)
+            setInterval(async function() {
+                await renderNotes();
+                await updateStats();
             }, SYNC_INTERVAL);
             
-            // 다른 탭에서의 변경사항 감지
-            window.addEventListener('storage', function(e) {
+            // 다른 탭에서의 변경사항 감지 (localStorage 백업)
+            window.addEventListener('storage', async function(e) {
                 if (e.key === STORAGE_KEY) {
-                    renderNotes();
-                    updateStats();
+                    await renderNotes();
+                    await updateStats();
                 }
             });
+        });
+
+        // 페이지 언로드 시 구독 해제
+        window.addEventListener('beforeunload', function() {
+            if (realtimeSubscription) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    supabaseClient.removeChannel(realtimeSubscription);
+                }
+            }
         });
     </script>
 </body>

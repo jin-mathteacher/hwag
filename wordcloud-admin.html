@@ -6,6 +6,9 @@
     <title>관리자 페이지 - 실습 1 & 2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -472,6 +475,24 @@
         const PRACTICE4_STORAGE_KEY = `wallboard_practice4_${CLASS_ID}`;
         const PRACTICE5_STORAGE_KEY = `reflection_practice5_${CLASS_ID}`;
         const SYNC_INTERVAL = 1000; // 1초마다 새로고침
+
+        // Supabase 클라이언트 가져오기
+        function getSupabaseClient() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabase !== 'undefined') {
+                const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        // Supabase Realtime 구독 변수
+        let realtimeSubscription1 = null;
+        let realtimeSubscription2 = null;
         
         // 총 관리자가 다른 강사의 클래스를 볼 때 헤더에 클래스 정보 표시
         if (queryClassId && queryClassName) {
@@ -482,7 +503,7 @@
         }
 
         // 탭 전환
-        function switchTab(tabName) {
+        async function switchTab(tabName) {
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
@@ -490,10 +511,11 @@
             if (tabName === 'practice1') {
                 buttons[0].classList.add('active');
                 document.getElementById('practice1-tab').classList.add('active');
+                await refreshData();
             } else if (tabName === 'practice2') {
                 buttons[1].classList.add('active');
                 document.getElementById('practice2-tab').classList.add('active');
-                refreshWallboardData();
+                await refreshWallboardData();
             } else if (tabName === 'practice4') {
                 buttons[2].classList.add('active');
                 document.getElementById('practice4-tab').classList.add('active');
@@ -524,7 +546,40 @@
             };
         }
 
-        function loadWordCloudData() {
+        async function loadWordCloudData() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', 'practice1')
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        practiceData.participants = new Set(practiceData.participants || []);
+                        
+                        // localStorage에도 동기화
+                        const classData = getClassData();
+                        classData.practice1 = {
+                            words: practiceData.words || {},
+                            participants: Array.from(practiceData.participants || []),
+                            lastUpdate: practiceData.lastUpdate || Date.now()
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                        
+                        return practiceData;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const classData = getClassData();
             const data = classData.practice1 || {
                 words: {},
@@ -535,8 +590,8 @@
             return data;
         }
 
-        function updateWordCloud() {
-            const data = loadWordCloudData();
+        async function updateWordCloud() {
+            const data = await loadWordCloudData();
             const words = Object.keys(data.words);
             
             if (words.length === 0) {
@@ -573,8 +628,8 @@
             });
         }
 
-        function updateStats() {
-            const data = loadWordCloudData();
+        async function updateStats() {
+            const data = await loadWordCloudData();
             const totalWords = Object.values(data.words).reduce((sum, count) => sum + count, 0);
             const uniqueWords = Object.keys(data.words).length;
             
@@ -606,8 +661,8 @@
                 });
         }
 
-        function updateWordList() {
-            const data = loadWordCloudData();
+        async function updateWordList() {
+            const data = await loadWordCloudData();
             const words = Object.entries(data.words);
             
             if (words.length === 0) {
@@ -628,14 +683,14 @@
             `).join('');
         }
 
-        function refreshData() {
-            updateWordCloud();
-            updateStats();
-            updateWordList();
+        async function refreshData() {
+            await updateWordCloud();
+            await updateStats();
+            await updateWordList();
         }
 
-        function exportData() {
-            const data = loadWordCloudData();
+        async function exportData() {
+            const data = await loadWordCloudData();
             const exportData = {
                 words: data.words,
                 participants: Array.from(data.participants),
@@ -657,7 +712,7 @@
             alert('데이터가 내보내졌습니다!');
         }
 
-        function clearData() {
+        async function clearData() {
             if (confirm('정말로 모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
                 const classData = getClassData();
                 classData.practice1 = {
@@ -666,24 +721,124 @@
                     lastUpdate: Date.now()
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                
+                // Supabase에도 저장
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        await supabaseClient
+                            .from('practice_data')
+                            .upsert({
+                                class_id: CLASS_ID,
+                                practice_type: 'practice1',
+                                data: classData.practice1
+                            }, {
+                                onConflict: 'class_id,practice_type'
+                            });
+                    } catch (error) {
+                        console.error('Supabase 초기화 오류:', error);
+                    }
+                }
+                
                 alert('데이터가 초기화되었습니다.');
-                refreshData();
+                await refreshData();
             }
         }
 
+        // Supabase Realtime 구독 설정
+        function setupRealtimeSubscriptions() {
+            const supabaseClient = getSupabaseClient();
+            if (!supabaseClient) {
+                console.warn('Supabase 클라이언트를 사용할 수 없습니다.');
+                return;
+            }
+
+            // 실습 1 구독
+            if (realtimeSubscription1) {
+                supabaseClient.removeChannel(realtimeSubscription1);
+            }
+            realtimeSubscription1 = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_practice1`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice1`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실습 1 실시간 업데이트 수신:', payload);
+                        await refreshData();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 실습 1 Realtime 구독 상태:', status);
+                });
+
+            // 실습 2 구독
+            if (realtimeSubscription2) {
+                supabaseClient.removeChannel(realtimeSubscription2);
+            }
+            realtimeSubscription2 = supabaseClient
+                .channel(`practice_data_${CLASS_ID}_practice2`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice2`
+                    },
+                    async (payload) => {
+                        console.log('🔄 실습 2 실시간 업데이트 수신:', payload);
+                        await refreshWallboardData();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 실습 2 Realtime 구독 상태:', status);
+                });
+        }
+
         // 초기화 및 주기적 업데이트
-        window.addEventListener('load', function() {
-            refreshData();
+        window.addEventListener('load', async function() {
+            await refreshData();
             
-            // 주기적으로 새로고침
-            setInterval(refreshData, SYNC_INTERVAL);
+            // Supabase Realtime 구독 설정
+            setupRealtimeSubscriptions();
             
-            // 다른 탭에서의 변경사항 감지
-            window.addEventListener('storage', function(e) {
+            // 주기적으로 새로고침 (Realtime이 실패할 경우를 대비)
+            setInterval(async function() {
+                if (document.getElementById('practice1-tab').classList.contains('active')) {
+                    await refreshData();
+                } else if (document.getElementById('practice2-tab').classList.contains('active')) {
+                    await refreshWallboardData();
+                }
+            }, SYNC_INTERVAL);
+            
+            // 다른 탭에서의 변경사항 감지 (localStorage 백업)
+            window.addEventListener('storage', async function(e) {
                 if (e.key === STORAGE_KEY) {
-                    refreshData();
+                    if (document.getElementById('practice1-tab').classList.contains('active')) {
+                        await refreshData();
+                    } else if (document.getElementById('practice2-tab').classList.contains('active')) {
+                        await refreshWallboardData();
+                    }
                 }
             });
+        });
+
+        // 페이지 언로드 시 구독 해제
+        window.addEventListener('beforeunload', function() {
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                if (realtimeSubscription1) {
+                    supabaseClient.removeChannel(realtimeSubscription1);
+                }
+                if (realtimeSubscription2) {
+                    supabaseClient.removeChannel(realtimeSubscription2);
+                }
+            }
         });
 
         // 캔버스 크기 조정
@@ -699,14 +854,14 @@
         window.addEventListener('load', resizeCanvas);
 
         // 워드크라우드 이미지 다운로드
-        function downloadWordCloudImage() {
+        async function downloadWordCloudImage() {
             const canvas = document.getElementById('admin-wordcloud-canvas');
             if (!canvas) {
                 alert('워드크라우드가 없습니다.');
                 return;
             }
             
-            const data = loadWordCloudData();
+            const data = await loadWordCloudData();
             if (Object.keys(data.words || {}).length === 0) {
                 alert('다운로드할 워드크라우드가 없습니다.');
                 return;
@@ -728,7 +883,7 @@
 
         // 통계표 이미지 다운로드
         async function downloadStatsImage() {
-            const data = loadWordCloudData();
+            const data = await loadWordCloudData();
             const statsDiv = document.createElement('div');
             statsDiv.style.cssText = 'background: white; padding: 30px; font-family: Arial; width: 800px;';
             
@@ -813,7 +968,40 @@
         }
 
         // 실습 2 담벼락 관리 함수들
-        function loadWallboardData() {
+        async function loadWallboardData() {
+            // 먼저 Supabase에서 데이터 로드 시도
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    const { data: supabaseData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', 'practice2')
+                        .single();
+                    
+                    if (!error && supabaseData && supabaseData.data) {
+                        // Supabase 데이터를 사용
+                        const practiceData = supabaseData.data;
+                        practiceData.participants = new Set(practiceData.participants || []);
+                        
+                        // localStorage에도 동기화
+                        const classData = getClassData();
+                        classData.practice2 = {
+                            notes: practiceData.notes || [],
+                            participants: Array.from(practiceData.participants || []),
+                            lastUpdate: practiceData.lastUpdate || Date.now()
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                        
+                        return practiceData;
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // Supabase를 사용할 수 없으면 localStorage에서 로드
             const classData = getClassData();
             const data = classData.practice2 || {
                 notes: [],
@@ -824,8 +1012,8 @@
             return data;
         }
 
-        function refreshWallboardData() {
-            const data = loadWallboardData();
+        async function refreshWallboardData() {
+            const data = await loadWallboardData();
             
             document.getElementById('wallboardNoteCount').textContent = data.notes.length;
             document.getElementById('wallboardParticipantCount').textContent = data.participants.size;
@@ -867,8 +1055,8 @@
             }).join('');
         }
 
-        function exportWallboardData() {
-            const data = loadWallboardData();
+        async function exportWallboardData() {
+            const data = await loadWallboardData();
             const exportData = {
                 notes: data.notes,
                 participants: Array.from(data.participants),
@@ -889,7 +1077,7 @@
             alert('데이터가 내보내졌습니다!');
         }
 
-        function clearWallboardData() {
+        async function clearWallboardData() {
             if (confirm('정말로 실습 2 담벼락의 모든 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
                 const classData = getClassData();
                 classData.practice2 = {
@@ -898,28 +1086,37 @@
                     lastUpdate: Date.now()
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(classData));
+                
+                // Supabase에도 저장
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        await supabaseClient
+                            .from('practice_data')
+                            .upsert({
+                                class_id: CLASS_ID,
+                                practice_type: 'practice2',
+                                data: classData.practice2
+                            }, {
+                                onConflict: 'class_id,practice_type'
+                            });
+                    } catch (error) {
+                        console.error('Supabase 초기화 오류:', error);
+                    }
+                }
+                
                 alert('담벼락 데이터가 초기화되었습니다.');
-                refreshWallboardData();
+                await refreshWallboardData();
             }
         }
 
-        // 실습 2 데이터도 주기적으로 새로고침
-        setInterval(function() {
-            if (document.getElementById('practice2-tab').classList.contains('active')) {
-                refreshWallboardData();
-            }
-        }, SYNC_INTERVAL);
+        // 실습 2 데이터도 주기적으로 새로고침 (이미 위에서 처리됨)
 
-        // 다른 탭에서의 변경사항 감지 (실습 2)
-        window.addEventListener('storage', function(e) {
-            if (e.key === STORAGE_KEY) {
-                refreshWallboardData();
-            }
-        });
+        // 다른 탭에서의 변경사항 감지 (이미 위에서 처리됨)
 
         // 담벼락 이미지 다운로드
         async function downloadWallboardImage() {
-            const data = loadWallboardData();
+            const data = await loadWallboardData();
             if (data.notes.length === 0) {
                 alert('다운로드할 담벼락 데이터가 없습니다.');
                 return;
