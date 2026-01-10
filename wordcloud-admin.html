@@ -466,17 +466,38 @@
     </div>
 
     <script>
+        // URL 쿼리 파라미터 확인
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryClassId = urlParams.get('classId');
+        const queryClassName = urlParams.get('className');
+        const queryAdmin = urlParams.get('admin'); // 총 관리자 직접 접근 플래그
+        
         // 세션 확인 (강사 또는 관리자만 접근 가능)
-        const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        let session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+        
+        // 총 관리자가 쿼리 파라미터로 접근한 경우 세션 자동 생성/복원
+        if (queryAdmin === 'true' || (queryClassId && !session.type)) {
+            // 총 관리자 세션이 있는지 확인 또는 생성
+            const adminSession = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+            if (adminSession.type === 'admin') {
+                session = adminSession;
+            } else if (queryAdmin === 'true') {
+                // 쿼리 파라미터로 총 관리자 접근 시 임시 세션 생성
+                session = {
+                    type: 'admin',
+                    username: 'admin',
+                    isAdminAccess: true,
+                    loginTime: Date.now()
+                };
+                sessionStorage.setItem('userSession', JSON.stringify(session));
+            }
+        }
+        
+        // 세션 타입 확인
         if (session.type !== 'teacher' && session.type !== 'admin') {
             alert('강사 또는 관리자 권한이 필요합니다.');
             window.location.href = 'login.html';
         }
-        
-        // URL 쿼리 파라미터에서 클래스 ID 가져오기 (총 관리자가 다른 강사의 클래스를 볼 때)
-        const urlParams = new URLSearchParams(window.location.search);
-        const queryClassId = urlParams.get('classId');
-        const queryClassName = urlParams.get('className');
         
         // 쿼리 파라미터가 있으면 해당 클래스 ID 사용, 없으면 세션의 클래스 ID 사용
         const CLASS_ID = queryClassId || session.classId || 'default';
@@ -503,12 +524,22 @@
         let realtimeSubscription1 = null;
         let realtimeSubscription2 = null;
         let realtimeSubscription4 = null;
+        let realtimeSubscription5 = null;
         
         // 총 관리자가 다른 강사의 클래스를 볼 때 헤더에 클래스 정보 표시
         if (queryClassId && queryClassName) {
             const header = document.querySelector('.header p');
             if (header) {
                 header.textContent = `${queryClassName} - 실습 1, 2, 4, 5 통합 관리`;
+            }
+            
+            // 총 관리자가 클래스를 선택해서 접근한 경우 "관리자 대시보드" 버튼으로 변경
+            if (session.type === 'admin' || queryAdmin === 'true') {
+                const backButton = document.getElementById('backButton');
+                if (backButton) {
+                    backButton.textContent = '← 관리자 대시보드';
+                    backButton.href = 'admin-dashboard.html';
+                }
             }
         } else if (session.type === 'admin' && !queryClassId) {
             // 관리자 모드이고 특정 클래스를 선택하지 않았을 때
@@ -878,15 +909,21 @@
             if (realtimeSubscription2) {
                 supabaseClient.removeChannel(realtimeSubscription2);
             }
+            
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때는 모든 practice2 데이터 감지
+            const filter2 = (session.type === 'admin' && !queryClassId) 
+                ? `practice_type=eq.practice2`
+                : `class_id=eq.${CLASS_ID} AND practice_type=eq.practice2`;
+            
             realtimeSubscription2 = supabaseClient
-                .channel(`practice_data_${CLASS_ID}_practice2`)
+                .channel(`practice_data_${session.type === 'admin' && !queryClassId ? 'all' : CLASS_ID}_practice2`)
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
                         table: 'practice_data',
-                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice2`
+                        filter: filter2
                     },
                     async (payload) => {
                         console.log('🔄 실습 2 실시간 업데이트 수신:', payload);
@@ -929,15 +966,21 @@
             if (realtimeSubscription5) {
                 supabaseClient.removeChannel(realtimeSubscription5);
             }
+            
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때는 모든 practice5 데이터 감지
+            const filter5 = (session.type === 'admin' && !queryClassId) 
+                ? `practice_type=eq.practice5`
+                : `class_id=eq.${CLASS_ID} AND practice_type=eq.practice5`;
+            
             realtimeSubscription5 = supabaseClient
-                .channel(`practice_data_${CLASS_ID}_practice5`)
+                .channel(`practice_data_${session.type === 'admin' && !queryClassId ? 'all' : CLASS_ID}_practice5`)
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
                         table: 'practice_data',
-                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice5`
+                        filter: filter5
                     },
                     async (payload) => {
                         console.log('🔄 실습 5 실시간 업데이트 수신:', payload);
@@ -993,6 +1036,9 @@
                 }
                 if (realtimeSubscription2) {
                     supabaseClient.removeChannel(realtimeSubscription2);
+                }
+                if (realtimeSubscription4) {
+                    supabaseClient.removeChannel(realtimeSubscription4);
                 }
                 if (realtimeSubscription5) {
                     supabaseClient.removeChannel(realtimeSubscription5);
@@ -1128,7 +1174,62 @@
 
         // 실습 2 담벼락 관리 함수들
         async function loadWallboardData() {
-            // 먼저 Supabase에서 데이터 로드 시도
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때 모든 클래스 데이터 합치기
+            if (session.type === 'admin' && !queryClassId) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        // 모든 클래스의 practice2 데이터 가져오기
+                        const { data: allClassesData, error } = await supabaseClient
+                            .from('practice_data')
+                            .select('data, class_id')
+                            .eq('practice_type', 'practice2');
+                        
+                        if (!error && allClassesData && allClassesData.length > 0) {
+                            // 모든 클래스의 데이터 합치기
+                            const mergedData = {
+                                notes: [],
+                                participants: new Set(),
+                                lastUpdate: 0
+                            };
+                            
+                            allClassesData.forEach(item => {
+                                if (item.data) {
+                                    const practiceData = item.data;
+                                    // 카드 합치기
+                                    if (practiceData.notes && Array.isArray(practiceData.notes)) {
+                                        practiceData.notes.forEach(note => {
+                                            mergedData.notes.push({
+                                                ...note,
+                                                classId: item.class_id // 클래스 ID 추가
+                                            });
+                                        });
+                                    }
+                                    // 참여자 합치기
+                                    if (practiceData.participants) {
+                                        const participantsArray = Array.isArray(practiceData.participants) 
+                                            ? practiceData.participants 
+                                            : Object.keys(practiceData.participants || {});
+                                        participantsArray.forEach(participant => {
+                                            mergedData.participants.add(`${item.class_id}_${participant}`);
+                                        });
+                                    }
+                                    // 마지막 업데이트 시간
+                                    if (practiceData.lastUpdate > mergedData.lastUpdate) {
+                                        mergedData.lastUpdate = practiceData.lastUpdate;
+                                    }
+                                }
+                            });
+                            
+                            return mergedData;
+                        }
+                    } catch (error) {
+                        console.error('관리자 모드 데이터 로드 오류:', error);
+                    }
+                }
+            }
+            
+            // 특정 클래스 데이터 로드 또는 관리자 모드가 아닐 때
             const supabaseClient = getSupabaseClient();
             if (supabaseClient) {
                 try {
@@ -1379,11 +1480,18 @@
                                 if (itemData && itemData.students) {
                                     Object.keys(itemData.students).forEach(studentId => {
                                         const studentData = itemData.students[studentId];
-                                        // classId를 포함하여 저장 (같은 userId가 여러 클래스에 있을 수 있음)
-                                        const uniqueKey = `${item.class_id}_${studentId}`;
+                                        // 특정 클래스를 선택했을 때만 해당 클래스의 데이터만 표시
+                                        if (queryClassId && item.class_id !== queryClassId) {
+                                            return; // 다른 클래스 데이터는 스킵
+                                        }
+                                        // 저장된 키(studentId = USER_ID)를 그대로 사용
+                                        // 같은 userId가 여러 클래스에 있을 수 있으므로 classId도 포함하여 uniqueKey 생성
+                                        // 하지만 특정 클래스를 볼 때는 원본 키를 사용하여 데이터 접근 가능하도록
+                                        const uniqueKey = queryClassId ? studentId : `${item.class_id}_${studentId}`;
                                         practice4Data.students[uniqueKey] = {
                                             ...studentData,
-                                            classId: item.class_id
+                                            classId: item.class_id,
+                                            originalUserId: studentId // 원본 USER_ID 보존
                                         };
                                     });
                                 }
@@ -1418,9 +1526,27 @@
             
             const students = practice4Data.students || {};
             const studentIds = Object.keys(students);
+            
+            console.log('🔄 Practice4 새로고침 - 수강생 수:', studentIds.length);
+            console.log('🔄 Practice4 수강생 목록:', studentIds);
+            
+            // 각 수강생의 데이터 확인 (디버깅용)
+            studentIds.forEach(id => {
+                const student = students[id];
+                console.log(`🔄 수강생 ${student.userName}:`, {
+                    hasFinalResult: !!student.finalResult,
+                    hasResearchTopic: !!(student.finalResult && student.finalResult.researchTopic),
+                    finalResult: student.finalResult
+                });
+            });
+            
             const completedCount = studentIds.filter(id => {
                 const student = students[id];
-                return student && student.finalResult && student.finalResult.researchTopic;
+                const hasResult = student && student.finalResult && student.finalResult.researchTopic;
+                if (!hasResult && student) {
+                    console.log(`⚠️ 미완료: ${student.userName} - finalResult:`, student.finalResult);
+                }
+                return hasResult;
             }).length;
             
             document.getElementById('practice4ParticipantCount').textContent = studentIds.length;
@@ -1440,14 +1566,17 @@
                 
                 studentListContainer.innerHTML = sortedStudents.map((studentId, index) => {
                     const student = students[studentId];
-                    const isCompleted = student.finalResult && student.finalResult.researchTopic;
+                    const isCompleted = student && student.finalResult && student.finalResult.researchTopic;
                     const isSelected = selectedStudentId === studentId;
                     const className = isCompleted ? 'completed' : 'incomplete';
+                    
+                    // studentId에 특수문자가 있을 수 있으므로 escape 처리
+                    const safeStudentId = studentId.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     
                     return `
                         <button 
                             class="student-button ${className} ${isSelected ? 'selected' : ''}"
-                            onclick="selectPractice4Student('${studentId}')"
+                            onclick="selectPractice4Student('${safeStudentId}')"
                             style="
                                 width: 100%;
                                 padding: 12px 15px;
@@ -1473,9 +1602,18 @@
             }
             
             // 선택된 수강생이 있으면 상세 정보 표시
+            let sortedStudents = [];
+            if (studentIds.length > 0) {
+                sortedStudents = studentIds.sort((a, b) => {
+                    const timeA = students[a].timestamp || 0;
+                    const timeB = students[b].timestamp || 0;
+                    return timeB - timeA;
+                });
+            }
+            
             if (selectedStudentId && students[selectedStudentId]) {
                 displayPractice4StudentDetail(students[selectedStudentId]);
-            } else if (studentIds.length > 0) {
+            } else if (sortedStudents.length > 0) {
                 // 첫 번째 수강생 자동 선택
                 selectedStudentId = sortedStudents[0];
                 displayPractice4StudentDetail(students[selectedStudentId]);
@@ -1637,7 +1775,52 @@
         // 실습 5 관리 함수들 (STORAGE_KEY는 이미 위에서 정의됨)
 
         async function loadPractice5Data() {
-            // 먼저 Supabase에서 데이터 로드 시도
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때 모든 클래스 데이터 합치기
+            if (session.type === 'admin' && !queryClassId) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        // 모든 클래스의 practice5 데이터 가져오기
+                        const { data: allClassesData, error } = await supabaseClient
+                            .from('practice_data')
+                            .select('data, class_id')
+                            .eq('practice_type', 'practice5');
+                        
+                        if (!error && allClassesData && allClassesData.length > 0) {
+                            // 모든 클래스의 데이터 합치기
+                            const mergedData = {
+                                reflections: [],
+                                lastUpdate: 0
+                            };
+                            
+                            allClassesData.forEach(item => {
+                                if (item.data) {
+                                    const practiceData = item.data;
+                                    // 성찰 기록 합치기
+                                    if (practiceData.reflections && Array.isArray(practiceData.reflections)) {
+                                        practiceData.reflections.forEach(reflection => {
+                                            mergedData.reflections.push({
+                                                ...reflection,
+                                                classId: item.class_id // 클래스 ID 추가
+                                            });
+                                        });
+                                    }
+                                    // 마지막 업데이트 시간
+                                    if (practiceData.lastUpdate > mergedData.lastUpdate) {
+                                        mergedData.lastUpdate = practiceData.lastUpdate;
+                                    }
+                                }
+                            });
+                            
+                            return mergedData;
+                        }
+                    } catch (error) {
+                        console.error('관리자 모드 데이터 로드 오류:', error);
+                    }
+                }
+            }
+            
+            // 특정 클래스 데이터 로드 또는 관리자 모드가 아닐 때
             const supabaseClient = getSupabaseClient();
             if (supabaseClient) {
                 try {
