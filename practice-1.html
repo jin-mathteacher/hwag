@@ -213,7 +213,7 @@
                 <div style="background: rgba(0, 191, 255, 0.9); padding: 20px; border-radius: 10px; margin-bottom: 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                     <p style="font-size: 1.3em; font-weight: bold; color: #000; margin: 0; line-height: 1.6;">
                         선생님들은 <strong style="color: #fff; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 5px;">[연구대회]</strong>라는 말을 들으면 어떤 단어가 떠오르시나요?<br>
-                        <span style="font-size: 1.1em; color: #000;">1개씩 생각나는 대로 입력해주세요!</span>
+                        <span style="font-size: 1.1em; color: #000;">3개씩만 입력해주세요!</span>
                     </p>
                 </div>
                 
@@ -295,6 +295,8 @@
         let realtimeSubscription = null;
 
         // 워드크라우드 데이터 구조 (클래스별 분리)
+        let lastWordListHash = null; // 이전 단어 리스트 해시값 저장
+        
         function getClassData() {
             const data = localStorage.getItem(STORAGE_KEY);
             if (data) {
@@ -467,30 +469,46 @@
             
             document.getElementById('wordcloud-placeholder').style.display = 'none';
             
-            // WordCloud2.js 형식으로 변환
-            const wordList = Object.entries(data.words).map(([word, count]) => [word, count * 10]);
+            // 단어를 빈도순으로 정렬 (많이 나온 단어가 먼저)
+            const sortedWords = Object.entries(data.words)
+                .sort((a, b) => b[1] - a[1]) // 빈도순 내림차순 정렬
+                .map(([word, count]) => [word, count * 10]);
+            
+            // 단어 리스트가 변경되었는지 확인 (단어와 개수 기준)
+            const currentHash = JSON.stringify(sortedWords.map(([word, size]) => [word, size]));
+            
+            // 단어가 추가/변경되지 않았으면 위치 변경하지 않음
+            if (lastWordListHash === currentHash) {
+                return; // 위치 변경 없이 종료
+            }
+            
+            lastWordListHash = currentHash; // 현재 해시 저장
             
             // 캔버스 초기화
             const canvas = document.getElementById('wordcloud-canvas');
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 워드크라우드 생성
+            // 워드크라우드 생성 (많이 나온 단어가 가운데 배치되도록)
             WordCloud(canvas, {
-                list: wordList,
+                list: sortedWords,
                 gridSize: 8,
                 weightFactor: function (size) {
                     return Math.pow(size, 0.6) * 8;
                 },
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                color: function() {
+                color: function(word, weight, fontSize, distance, theta) {
+                    // 빈도에 따라 색상 결정 (많이 나온 단어는 더 진한 색)
                     const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0'];
-                    return colors[Math.floor(Math.random() * colors.length)];
+                    const index = Math.min(Math.floor(fontSize / 15), colors.length - 1);
+                    return colors[index];
                 },
                 rotateRatio: 0.3,
                 rotationSteps: 2,
                 backgroundColor: 'transparent',
-                minSize: 8
+                minSize: 8,
+                shuffle: false, // 순서 유지 (많이 나온 단어가 먼저 배치)
+                drawOutOfBound: false
             });
         }
 

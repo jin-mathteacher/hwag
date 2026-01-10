@@ -131,11 +131,32 @@
         .wallboard-container {
             background: #f5f5f5;
             min-height: 600px;
+            max-height: 600px;
             border-radius: 10px;
             padding: 20px;
             position: relative;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* 스크롤바 스타일링 */
+        .wallboard-container::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .wallboard-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .wallboard-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .wallboard-container::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
         }
 
         .paste-area {
@@ -560,6 +581,33 @@
             document.querySelector(`[data-color="${color}"]`).classList.add('selected');
         }
 
+        // wallboard 높이 자동 조절
+        function adjustWallboardHeight(notes) {
+            const wallboard = document.getElementById('wallboard');
+            if (!wallboard || !notes || notes.length === 0) {
+                return;
+            }
+            
+            const CARD_HEIGHT = 150;
+            const PADDING = 20;
+            
+            // 가장 아래에 있는 카드 찾기
+            let maxY = 0;
+            notes.forEach(note => {
+                const cardBottom = note.y + CARD_HEIGHT;
+                if (cardBottom > maxY) {
+                    maxY = cardBottom;
+                }
+            });
+            
+            // 최소 높이와 필요 높이 중 더 큰 값 사용
+            const minHeight = 600;
+            const requiredHeight = maxY + PADDING;
+            const finalHeight = Math.max(minHeight, requiredHeight);
+            
+            wallboard.style.minHeight = finalHeight + 'px';
+        }
+        
         // 카드 위치 계산 (겹치지 않게 배치)
         function calculateCardPosition(existingNotes) {
             const CARD_WIDTH = 250;
@@ -575,7 +623,9 @@
             
             const wallboardRect = wallboard.getBoundingClientRect();
             const WALLBOARD_WIDTH = wallboardRect.width - (PADDING * 2);
-            const WALLBOARD_HEIGHT = wallboardRect.height - (PADDING * 2);
+            
+            // 높이는 동적으로 조절되므로 충분히 큰 값으로 설정
+            const WALLBOARD_HEIGHT = Math.max(600, wallboard.scrollHeight || 600);
             
             const cols = Math.max(1, Math.floor((WALLBOARD_WIDTH) / (CARD_WIDTH + PADDING)));
             const rows = Math.max(1, Math.floor((WALLBOARD_HEIGHT) / (CARD_HEIGHT + PADDING)));
@@ -590,8 +640,8 @@
                 }
             });
             
-            // 빈 자리 찾기
-            for (let row = 0; row < rows * 10; row++) { // 충분한 행 확보
+            // 빈 자리 찾기 (충분히 많은 행 탐색)
+            for (let row = 0; row < rows * 20; row++) { // 더 많은 행 확보
                 for (let col = 0; col < cols; col++) {
                     const key = `${col},${row}`;
                     if (!occupied.has(key)) {
@@ -607,10 +657,15 @@
             
             // 모든 자리가 차면 마지막 카드 아래에 추가
             if (existingNotes.length > 0) {
-                const lastNote = existingNotes[existingNotes.length - 1];
+                let maxY = 0;
+                existingNotes.forEach(note => {
+                    if (note.y > maxY) {
+                        maxY = note.y;
+                    }
+                });
                 return {
                     x: PADDING,
-                    y: lastNote.y + CARD_HEIGHT + PADDING
+                    y: maxY + CARD_HEIGHT + PADDING
                 };
             }
             
@@ -639,9 +694,12 @@
             
             data.participants.add(userId);
 
-            // 겹치지 않는 위치 계산
+            // 겹치지 않는 위치 계산 (wallboard 높이를 동적으로 확장 가능하게)
             const position = calculateCardPosition(data.notes);
             console.log('📍 계산된 위치:', position);
+            
+            // wallboard 높이 자동 조절 (필요한 경우)
+            adjustWallboardHeight(data.notes);
 
             const note = {
                 id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -735,11 +793,8 @@
             
             wallboard.innerHTML = '';
             
-            // 수강생은 자신이 작성한 카드만 보이도록 필터링
+            // 모든 수강생이 입력한 카드 모두 표시 (실습 1과 동일)
             let visibleNotes = data.notes || [];
-            if (session.type === 'student') {
-                visibleNotes = visibleNotes.filter(note => note.userId === userId);
-            }
             
             console.log('👁️ 표시할 카드 수:', visibleNotes.length);
             
@@ -752,6 +807,9 @@
                 const noteElement = createNoteElement(note);
                 wallboard.appendChild(noteElement);
             });
+            
+            // wallboard 높이 자동 조절
+            adjustWallboardHeight(visibleNotes);
             
             console.log('✅ renderNotes() 완료');
         }
@@ -773,13 +831,13 @@
             
             console.log('📍 카드 위치:', { x, y, id: note.id });
 
-            // 본인 작성 표기 (수강생인 경우)
+            // 본인 작성 표기
             const isOwnNote = note.userId === userId;
-            const ownBadge = (session.type === 'student' && isOwnNote) 
+            const ownBadge = isOwnNote 
                 ? '<span style="font-size: 0.7em; color: #667eea; font-weight: bold; margin-left: 5px;">(본인 작성)</span>' 
                 : '';
 
-            // 수강생은 자신이 작성한 카드만 삭제 버튼 표시
+            // 수강생은 자신이 작성한 카드만 삭제 버튼 표시 (표시는 모두 보이지만 삭제는 본인만)
             const canDelete = session.type === 'admin' || session.type === 'teacher' || isOwnNote;
             const deleteButton = canDelete 
                 ? `<button class="note-delete" onclick="deleteNote('${note.id}')" title="삭제">×</button>`
@@ -903,14 +961,12 @@
         async function updateStats() {
             const data = await loadWallboardData();
             
-            // 수강생은 자신의 카드만 카운트
-            let visibleNotes = data.notes;
-            if (session.type === 'student') {
-                visibleNotes = data.notes.filter(note => note.userId === userId);
-            }
+            // 모든 카드 카운트 (실습 1과 동일하게 모든 수강생의 입력을 표시)
+            let visibleNotes = data.notes || [];
             
             document.getElementById('noteCount').textContent = visibleNotes.length;
             
+            // 참여자 수는 실제 참여한 사용자 수
             const uniqueParticipants = new Set(visibleNotes.map(note => note.userId));
             document.getElementById('participantCount').textContent = uniqueParticipants.size;
         }

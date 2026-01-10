@@ -362,8 +362,17 @@
             </div>
         </div>
 
+        <!-- 통합 데이터 보기 섹션 -->
+        <div style="margin-top: 40px; margin-bottom: 40px; padding: 30px; background: #f8f9fa; border-radius: 15px; border: 2px solid #667eea;">
+            <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">📊 모든 강사 통합 데이터 보기</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <a href="wordcloud-admin.html" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 1.2em; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">🚀 통합 관리자 페이지 열기</a>
+            </div>
+            <p style="text-align: center; color: #666; font-size: 1em;">실습 1, 2, 4, 5의 모든 강사 데이터를 통합하여 볼 수 있습니다.</p>
+        </div>
+
         <div class="teacher-list">
-            <h2 style="color: #764ba2; margin-bottom: 20px;">강사별 클래스 관리</h2>
+            <h2 style="color: #764ba2; margin-bottom: 20px;">강사별 개별 관리자 페이지</h2>
             <div id="teacherListContainer">
                 <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다</p>
             </div>
@@ -571,7 +580,7 @@
                                 ` : ''}
                             </div>
                             <div class="action-buttons">
-                                <button class="btn btn-admin" onclick="viewAdminPage('${cls.id}', '${cls.name}')">관리자 페이지</button>
+                                <a href="wordcloud-admin.html?classId=${cls.id}&className=${encodeURIComponent(cls.name)}" target="_blank" class="btn btn-admin" style="text-decoration: none; display: inline-block;">관리자 페이지</a>
                                 <button class="btn btn-view" onclick="viewClassData('${cls.id}')">데이터 보기</button>
                                 <button class="btn btn-download" onclick="downloadClassData('${cls.id}')">JSON 다운로드</button>
                                 <button class="btn btn-image" onclick="downloadClassImages('${cls.id}', '${cls.name}')">이미지 다운로드</button>

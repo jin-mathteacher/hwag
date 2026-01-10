@@ -292,7 +292,7 @@
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-button">← 홈으로</a>
+        <a href="index.html" class="back-button" id="backButton">← 홈으로</a>
         
         <div class="header">
             <h1>관리자 페이지</h1>
@@ -500,6 +500,19 @@
             if (header) {
                 header.textContent = `${queryClassName} - 실습 1, 2, 4, 5 통합 관리`;
             }
+        } else if (session.type === 'admin' && !queryClassId) {
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때
+            const header = document.querySelector('.header p');
+            if (header) {
+                header.textContent = '전체 강사 결과물 통합 보기 - 실습 1, 2, 4, 5 통합 관리';
+            }
+            
+            // 총 관리자 통합 보기 모드일 때만 "관리자 대시보드" 버튼으로 변경
+            const backButton = document.getElementById('backButton');
+            if (backButton) {
+                backButton.textContent = '← 관리자 대시보드';
+                backButton.href = 'admin-dashboard.html';
+            }
         }
 
         // 탭 전환
@@ -547,7 +560,58 @@
         }
 
         async function loadWordCloudData() {
-            // 먼저 Supabase에서 데이터 로드 시도
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때 모든 클래스 데이터 합치기
+            if (session.type === 'admin' && !queryClassId) {
+                const supabaseClient = getSupabaseClient();
+                if (supabaseClient) {
+                    try {
+                        // 모든 클래스의 practice1 데이터 가져오기
+                        const { data: allClassesData, error } = await supabaseClient
+                            .from('practice_data')
+                            .select('data, class_id')
+                            .eq('practice_type', 'practice1');
+                        
+                        if (!error && allClassesData && allClassesData.length > 0) {
+                            // 모든 클래스의 데이터 합치기
+                            const mergedData = {
+                                words: {},
+                                participants: new Set(),
+                                lastUpdate: 0
+                            };
+                            
+                            allClassesData.forEach(item => {
+                                if (item.data) {
+                                    const practiceData = item.data;
+                                    // 단어 합치기
+                                    Object.entries(practiceData.words || {}).forEach(([word, count]) => {
+                                        if (mergedData.words[word]) {
+                                            mergedData.words[word] += count;
+                                        } else {
+                                            mergedData.words[word] = count;
+                                        }
+                                    });
+                                    // 참여자 합치기
+                                    if (practiceData.participants) {
+                                        practiceData.participants.forEach(participant => {
+                                            mergedData.participants.add(`${item.class_id}_${participant}`);
+                                        });
+                                    }
+                                    // 마지막 업데이트 시간
+                                    if (practiceData.lastUpdate > mergedData.lastUpdate) {
+                                        mergedData.lastUpdate = practiceData.lastUpdate;
+                                    }
+                                }
+                            });
+                            
+                            return mergedData;
+                        }
+                    } catch (error) {
+                        console.error('관리자 모드 데이터 로드 오류:', error);
+                    }
+                }
+            }
+            
+            // 특정 클래스 데이터 로드 또는 관리자 모드가 아닐 때
             const supabaseClient = getSupabaseClient();
             if (supabaseClient) {
                 try {
@@ -590,6 +654,8 @@
             return data;
         }
 
+        let lastAdminWordListHash = null; // 관리자 페이지용 이전 단어 리스트 해시값
+        
         async function updateWordCloud() {
             const data = await loadWordCloudData();
             const words = Object.keys(data.words);
@@ -601,30 +667,46 @@
             
             document.getElementById('admin-wordcloud-placeholder').style.display = 'none';
             
-            // WordCloud2.js 형식으로 변환
-            const wordList = Object.entries(data.words).map(([word, count]) => [word, count * 10]);
+            // 단어를 빈도순으로 정렬 (많이 나온 단어가 먼저)
+            const sortedWords = Object.entries(data.words)
+                .sort((a, b) => b[1] - a[1]) // 빈도순 내림차순 정렬
+                .map(([word, count]) => [word, count * 10]);
+            
+            // 단어 리스트가 변경되었는지 확인
+            const currentHash = JSON.stringify(sortedWords.map(([word, size]) => [word, size]));
+            
+            // 단어가 추가/변경되지 않았으면 위치 변경하지 않음
+            if (lastAdminWordListHash === currentHash) {
+                return; // 위치 변경 없이 종료
+            }
+            
+            lastAdminWordListHash = currentHash; // 현재 해시 저장
             
             // 캔버스 초기화
             const canvas = document.getElementById('admin-wordcloud-canvas');
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 워드크라우드 생성
+            // 워드크라우드 생성 (많이 나온 단어가 가운데 배치되도록)
             WordCloud(canvas, {
-                list: wordList,
+                list: sortedWords,
                 gridSize: 8,
                 weightFactor: function (size) {
                     return Math.pow(size, 0.6) * 10;
                 },
                 fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                color: function() {
+                color: function(word, weight, fontSize, distance, theta) {
+                    // 빈도에 따라 색상 결정
                     const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0'];
-                    return colors[Math.floor(Math.random() * colors.length)];
+                    const index = Math.min(Math.floor(fontSize / 15), colors.length - 1);
+                    return colors[index];
                 },
                 rotateRatio: 0.3,
                 rotationSteps: 2,
                 backgroundColor: 'transparent',
-                minSize: 10
+                minSize: 10,
+                shuffle: false, // 순서 유지 (많이 나온 단어가 먼저 배치)
+                drawOutOfBound: false
             });
         }
 
@@ -757,15 +839,21 @@
             if (realtimeSubscription1) {
                 supabaseClient.removeChannel(realtimeSubscription1);
             }
+            
+            // 관리자 모드이고 특정 클래스를 선택하지 않았을 때는 모든 practice1 데이터 감지
+            const filter = (session.type === 'admin' && !queryClassId) 
+                ? `practice_type=eq.practice1`
+                : `class_id=eq.${CLASS_ID} AND practice_type=eq.practice1`;
+            
             realtimeSubscription1 = supabaseClient
-                .channel(`practice_data_${CLASS_ID}_practice1`)
+                .channel(`practice_data_${session.type === 'admin' && !queryClassId ? 'all' : CLASS_ID}_practice1`)
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
                         table: 'practice_data',
-                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.practice1`
+                        filter: filter
                     },
                     async (payload) => {
                         console.log('🔄 실습 1 실시간 업데이트 수신:', payload);
