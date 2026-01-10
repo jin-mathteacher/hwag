@@ -1002,6 +1002,11 @@
             // 초기 로드 시 practice4 데이터도 로드 (비활성 탭이어도 백그라운드에서 로드)
             loadPractice4Data().catch(err => console.error('Practice4 초기 로드 오류:', err));
             
+            // practice4 탭이 활성화되어 있으면 초기 데이터 로드
+            if (document.getElementById('practice4-tab').classList.contains('active')) {
+                await refreshPractice4Data();
+            }
+            
             // 주기적으로 새로고침 (Realtime이 실패할 경우를 대비)
             setInterval(async function() {
                 if (document.getElementById('practice1-tab').classList.contains('active')) {
@@ -1022,6 +1027,14 @@
                         await refreshData();
                     } else if (document.getElementById('practice2-tab').classList.contains('active')) {
                         await refreshWallboardData();
+                    }
+                } else if (e.key && e.key.includes('practice4')) {
+                    if (document.getElementById('practice4-tab').classList.contains('active')) {
+                        await refreshPractice4Data();
+                    }
+                } else if (e.key && e.key.includes('practice5')) {
+                    if (document.getElementById('practice5-tab').classList.contains('active')) {
+                        await refreshPractice5Data();
                     }
                 }
             });
@@ -1869,16 +1882,38 @@
                 container.innerHTML = sortedReflections.map((reflection, index) => {
                     const date = new Date(reflection.timestamp);
                     return `
-                        <div class="word-item" style="flex-direction: column; align-items: flex-start;">
-                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
-                                <span class="word-text">#${index + 1} - ${reflection.userName || '익명'}</span>
+                        <div style="
+                            background: white;
+                            border-radius: 10px;
+                            padding: 20px;
+                            margin-bottom: 20px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            border: 1px solid #e0e0e0;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 1.1em; font-weight: bold; color: #667eea;">#${index + 1} - ${reflection.userName || '익명'}</span>
                                 <span style="color: #999; font-size: 0.9em;">${date.toLocaleString('ko-KR')}</span>
                             </div>
-                            <div style="background: #ffebee; padding: 10px; border-radius: 5px; width: 100%; margin-bottom: 5px;">
-                                <strong>사실:</strong> ${reflection.fact.replace(/\n/g, '<br>')}
+                            <div style="
+                                background: #ffebee;
+                                padding: 15px;
+                                border-radius: 8px;
+                                border-left: 4px solid #ef5350;
+                            ">
+                                <div style="font-weight: bold; color: #c62828; margin-bottom: 8px; font-size: 0.95em;">사실</div>
+                                <div style="color: #333; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap;">${reflection.fact.replace(/\n/g, '<br>')}</div>
                             </div>
-                            <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; width: 100%;">
-                                <strong>해석/성찰:</strong> ${reflection.reflection.replace(/\n/g, '<br>')}
+                            <div style="
+                                background: #e3f2fd;
+                                padding: 15px;
+                                border-radius: 8px;
+                                border-left: 4px solid #2196F3;
+                            ">
+                                <div style="font-weight: bold; color: #1565c0; margin-bottom: 8px; font-size: 0.95em;">해석/성찰</div>
+                                <div style="color: #333; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap;">${reflection.reflection.replace(/\n/g, '<br>')}</div>
                             </div>
                         </div>
                     `;
