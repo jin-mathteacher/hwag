@@ -722,7 +722,7 @@
                                 ` : ''}
                             </div>
                             <div class="action-buttons">
-                                <a href="wordcloud-admin.html?classId=${cls.id}&className=${encodeURIComponent(cls.name)}" target="_blank" class="btn btn-admin" style="text-decoration: none; display: inline-block;">관리자 페이지</a>
+                                <a href="wordcloud-admin.html?classId=${cls.id}&className=${encodeURIComponent(cls.name)}&admin=true" target="_blank" class="btn btn-admin" style="text-decoration: none; display: inline-block;">관리자 페이지</a>
                                 <button class="btn btn-view" onclick="viewClassData('${cls.id}')">데이터 보기</button>
                                 <button class="btn btn-download" onclick="downloadClassData('${cls.id}')">JSON 다운로드</button>
                                 <button class="btn btn-image" onclick="downloadClassImages('${cls.id}', '${cls.name}')">이미지 다운로드</button>
@@ -1044,7 +1044,7 @@
         // 관리자 페이지 보기 (새 창에서 열기)
         function viewAdminPage(classId, className) {
             // 새 창에서 관리자 페이지 열기 (클래스 ID를 쿼리 파라미터로 전달)
-            const url = `wordcloud-admin.html?classId=${encodeURIComponent(classId)}&className=${encodeURIComponent(className)}`;
+            const url = `wordcloud-admin.html?classId=${encodeURIComponent(classId)}&className=${encodeURIComponent(className)}&admin=true`;
             window.open(url, '_blank', 'width=1400,height=800,scrollbars=yes');
         }
         
