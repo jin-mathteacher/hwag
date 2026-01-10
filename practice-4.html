@@ -4,9 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>실습 4 - 교육현안 실습하기</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
+    <!-- jsPDF 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- html2canvas 라이브러리 (한글 표시를 위해 사용) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -77,6 +83,18 @@
             transform: translateY(-2px);
         }
 
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-container h1 {
+            margin: 0;
+            flex: 1;
+        }
+
         .menu-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -119,195 +137,6 @@
             display: block;
         }
 
-        .iframe-container {
-            position: relative;
-            width: 100%;
-            height: calc(100vh - 200px);
-            min-height: 600px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        /* 담벼락 스타일 (교육 현황 공유하기) */
-        .wallboard-section {
-            margin-top: 20px;
-        }
-
-        .wallboard-container {
-            position: relative;
-            width: 100%;
-            min-height: 600px;
-            max-height: 600px;
-            background: #f5f5f5;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-        
-        /* 스크롤바 스타일링 */
-        .wallboard-container::-webkit-scrollbar {
-            width: 12px;
-        }
-        
-        .wallboard-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        .wallboard-container::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 10px;
-        }
-        
-        .wallboard-container::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
-        }
-
-        .paste-area {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .paste-input {
-            width: 100%;
-            min-height: 100px;
-            padding: 15px;
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            font-size: 1em;
-            font-family: inherit;
-            resize: vertical;
-            margin-bottom: 15px;
-        }
-
-        .paste-input:focus {
-            outline: none;
-            border-color: #764ba2;
-        }
-
-        .color-picker {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .color-option {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: transform 0.2s ease;
-        }
-
-        .color-option:hover {
-            transform: scale(1.1);
-        }
-
-        .color-option.selected {
-            border-color: #333;
-            transform: scale(1.15);
-        }
-
-        .paste-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: bold;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .paste-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .note {
-            position: absolute;
-            min-width: 200px;
-            max-width: 300px;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            cursor: move;
-            word-wrap: break-word;
-            z-index: 10;
-        }
-
-        .note-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .note-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-        }
-
-        .note-delete {
-            background: rgba(255,0,0,0.7);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            cursor: pointer;
-            font-size: 1.2em;
-            line-height: 1;
-            transition: background 0.2s ease;
-        }
-
-        .note-delete:hover {
-            background: rgba(255,0,0,1);
-        }
-
-        .note-content {
-            color: #333;
-            font-size: 0.95em;
-            line-height: 1.5;
-        }
-
-        .note-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        .stats {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .stats p {
-            margin: 5px 0;
-            color: #666;
-        }
-
         .close-button {
             background: #667eea;
             color: white;
@@ -315,13 +144,392 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 20px;
+            margin-bottom: 20px;
             font-size: 1em;
             transition: background 0.3s ease;
         }
 
         .close-button:hover {
             background: #764ba2;
+        }
+
+        /* Wizard 스타일 (연구 주제 연결 활동) */
+        .progress-container {
+            margin-bottom: 40px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #88d8c0 0%, #6bc4a9 100%);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+        }
+
+        .progress-step.active {
+            color: #6bc4a9;
+            font-weight: bold;
+        }
+
+        .wizard-step {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .step-title {
+            color: #6bc4a9;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-description {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .tooltip-icon {
+            display: inline-block;
+            margin-left: 8px;
+            color: #6bc4a9;
+            cursor: help;
+            position: relative;
+        }
+
+        .tooltip-icon:hover .tooltip-text {
+            display: block;
+        }
+
+        .tooltip-text {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #88d8c0;
+        }
+
+        .advice-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+            background: #e7f3ff;
+            display: none;
+        }
+
+        .advice-box.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .advice-box.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .advice-box.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .advice-box.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .advice-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advice-content {
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .suggestion-box {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px dashed #007bff;
+        }
+
+        .suggestion-title {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .suggestion-text {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .copy-suggestion-btn {
+            margin-top: 8px;
+            padding: 5px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        .copy-suggestion-btn:hover {
+            background: #0056b3;
+        }
+
+        .example-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffc107;
+            margin-top: 10px;
+        }
+
+        .example-box strong {
+            color: #856404;
+        }
+
+        .preview-box {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #2196F3;
+            margin-top: 15px;
+        }
+
+        .preview-box .preview-title {
+            color: #1976D2;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .preview-text {
+            color: #333;
+            font-size: 1.05em;
+            line-height: 1.6;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #88d8c0 0%, #6bc4a9 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .result-card h3 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .result-section {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .result-section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .result-section-content {
+            line-height: 1.8;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #88d8c0 0%, #6bc4a9 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(107, 196, 169, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-copy {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .congrats-message {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .congrats-message i {
+            font-size: 4em;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .congrats-message h2 {
+            color: #6bc4a9;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -343,58 +551,214 @@
                 <p>Google NotebookLM을 활용하여 교육 문제를 도출합니다</p>
             </div>
             <div class="menu-item" onclick="showContent(3)">
-                <h2>3. 교육 현황 공유하기</h2>
-                <p>담벼락을 통해 교육 현황을 자유롭게 공유합니다</p>
+                <h2>3. 연구 주제 연결 활동</h2>
+                <p>5 Whys로 찾은 근본 원인을 바탕으로 교육현장연구 주제를 설계합니다</p>
             </div>
         </div>
 
-        <!-- 교육 현황 공유하기 (담벼락) -->
+        <!-- 연구 주제 연결 활동 (Wizard) -->
         <div class="content-section" id="content3">
             <button class="close-button" onclick="showMenu()">← 메뉴로 돌아가기</button>
-                    <div class="wallboard-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h2 style="color: #667eea; margin: 0;">📌 교육 현황 공유 담벼락</h2>
-                            <a href="wordcloud-admin.html" id="practice4AdminButton" class="link-button" style="background: rgba(102, 126, 234, 0.2); color: #667eea; border: 2px solid #667eea; display: none;">관리자 페이지</a>
-                        </div>
+            
+            <div class="header">
+                <div class="header-container">
+                    <div style="flex: 1;">
+                        <h1 style="color: #6bc4a9; margin-bottom: 10px;"><i class="fas fa-lightbulb"></i> 연구 주제 연결 활동</h1>
+                        <p>5 Whys로 찾은 근본 원인을 바탕으로 교육현장연구 주제를 설계해보세요</p>
+                    </div>
+                    <a href="wordcloud-admin.html" id="practice4AdminButton" class="link-button" style="background: rgba(107, 196, 169, 0.2); color: #6bc4a9; border: 2px solid #6bc4a9; display: none; margin-left: 20px;">관리자 페이지</a>
+                </div>
+            </div>
                 
-                <div class="stats" id="stats">
-                    <p><strong>총 메모:</strong> <span id="noteCount">0</span>개</p>
-                    <p><strong>참여자:</strong> <span id="participantCount">0</span>명</p>
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-steps">
+                    <div class="progress-step active" id="step1-label">1. 마음 열기</div>
+                    <div class="progress-step" id="step2-label">2. 변수 분리하기</div>
+                    <div class="progress-step" id="step3-label">3. 연구 질문 다듬기</div>
+                    <div class="progress-step" id="step4-label">4. 결과물 확인</div>
+                </div>
                 </div>
 
-                <div class="paste-area">
+            <!-- Step 1: 마음 열기 -->
+            <div class="wizard-step active" id="step1">
+                <div class="step-content">
+                    <div class="step-title">
+                        <i class="fas fa-heart"></i> Step 1: 마음 열기
+                    </div>
+                    <div class="step-description">
+                        5 Whys를 통해 발견한 가장 근본적인 원인(Root Cause) 문장을 적어주세요.
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            근본 원인 (Root Cause)
+                            <span class="tooltip-icon">
+                                <i class="fas fa-question-circle"></i>
+                                <span class="tooltip-text">5 Whys 기법으로 도출한 가장 깊은 원인</span>
+                            </span>
+                        </label>
                     <textarea 
-                        class="paste-input" 
-                        id="pasteInput" 
-                        placeholder="텍스트나 이미지를 붙여넣으세요. 이미지는 Ctrl+V로 붙여넣을 수 있습니다."
+                            class="form-textarea" 
+                            id="rootCause" 
+                            placeholder="예: 학생들의 집중 지속 시간을 고려하지 않고 수업을 설계했다."
+                            oninput="debounceAutoSave('rootCause')"
                     ></textarea>
-                    
-                    <div class="color-picker">
-                        <span style="color: #333; font-weight: bold; margin-right: 10px;">카드 색상:</span>
-                        <div class="color-option selected" data-color="#fff3cd" style="background: #fff3cd;" onclick="selectColor('#fff3cd')"></div>
-                        <div class="color-option" data-color="#d1ecf1" style="background: #d1ecf1;" onclick="selectColor('#d1ecf1')"></div>
-                        <div class="color-option" data-color="#d4edda" style="background: #d4edda;" onclick="selectColor('#d4edda')"></div>
-                        <div class="color-option" data-color="#f8d7da" style="background: #f8d7da;" onclick="selectColor('#f8d7da')"></div>
-                        <div class="color-option" data-color="#e2e3e5" style="background: #e2e3e5;" onclick="selectColor('#e2e3e5')"></div>
-                        <div class="color-option" data-color="#fff" style="background: #fff;" onclick="selectColor('#fff')"></div>
+                        <div class="example-box">
+                            <strong>예시:</strong> "학생들의 집중 지속 시간을 고려하지 않고 수업을 설계했다."
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="nextStep(2)">
+                            다음 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: 변수 분리하기 -->
+            <div class="wizard-step" id="step2">
+                <div class="step-content">
+                    <div class="step-title">
+                        <i class="fas fa-sliders-h"></i> Step 2: 변수 분리하기
+                    </div>
+                    <div class="step-description">
+                        연구를 위해 원인을 '내가 할 수 있는 것'과 '보고 싶은 결과'로 나눠봅시다.
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            독립변인 / 조작변인
+                            <span class="tooltip-icon">
+                                <i class="fas fa-question-circle"></i>
+                                <span class="tooltip-text">선생님이 수업에서 시도하거나 변화를 줄 부분</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="independentVar" 
+                            placeholder="예: 집중 시간을 고려한 10분 단위 모듈 수업"
+                            oninput="validateVariable('independent'); debounceAutoSave('independentVar')"
+                        />
+                        <div class="example-box">
+                            <strong>예시:</strong> 집중 시간을 고려한 10분 단위 모듈 수업
+                        </div>
+                        <div class="advice-box" id="independentAdvice"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            종속변인 / 관찰변인
+                            <span class="tooltip-icon">
+                                <i class="fas fa-question-circle"></i>
+                                <span class="tooltip-text">그로 인해 학생들에게서 보고 싶은 변화</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="dependentVar" 
+                            placeholder="예: 수업 참여 빈도, 과제 수행률"
+                            oninput="validateVariable('dependent'); debounceAutoSave('dependentVar')"
+                        />
+                        <div class="example-box">
+                            <strong>예시:</strong> 수업 참여 빈도, 과제 수행률
+                        </div>
+                        <div class="advice-box" id="dependentAdvice"></div>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="previousStep()">
+                            <i class="fas fa-arrow-left"></i> 이전
+                        </button>
+                        <button class="btn btn-primary" onclick="nextStep(3)">
+                            다음 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
                     </div>
                     
-                    <button class="paste-button" onclick="addNote()">메모 추가하기</button>
+            <!-- Step 3: 연구 질문 다듬기 -->
+            <div class="wizard-step" id="step3">
+                <div class="step-content">
+                    <div class="step-title">
+                        <i class="fas fa-edit"></i> Step 3: 연구 질문 다듬기
+                    </div>
+                    <div class="step-description">
+                        이 내용을 연구 질문으로 바꿔보겠습니다.
+                    </div>
+                    <div class="preview-box">
+                        <div class="preview-title">자동 생성된 연구 질문 미리보기:</div>
+                        <div class="preview-text" id="researchQuestionPreview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">연구 질문 (수정 가능)</label>
+                        <textarea 
+                            class="form-textarea" 
+                            id="researchQuestion" 
+                            placeholder="연구 질문을 입력하거나 수정하세요"
+                            oninput="debounceAutoSave('researchQuestion')"
+                        ></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="previousStep()">
+                            <i class="fas fa-arrow-left"></i> 이전
+                        </button>
+                        <button class="btn btn-primary" onclick="nextStep(4)">
+                            다음 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
                 </div>
 
-                <div class="wallboard-container" id="wallboard">
-                    <!-- 메모들이 여기에 동적으로 추가됩니다 -->
+            <!-- Step 4: 결과물 출력 -->
+            <div class="wizard-step" id="step4">
+                <div class="step-content">
+                    <div class="congrats-message">
+                        <i class="fas fa-check-circle"></i>
+                        <h2>연구 설계의 뼈대가 완성되었습니다!</h2>
+                        <p style="color: #666;">아래 결과물을 확인하고 복사하세요.</p>
+                </div>
+                    <div class="result-card">
+                        <h3><i class="fas fa-book"></i> 최종 결과물</h3>
+                        
+                        <div class="result-section">
+                            <div class="result-section-title">[연구 주제]</div>
+                            <div class="result-section-content" id="finalResearchTopic"></div>
+            </div>
+                        
+                        <div class="result-section">
+                            <div class="result-section-title">[연구 질문]</div>
+                            <div class="result-section-content" id="finalResearchQuestion"></div>
+                        </div>
+                        
+                        <button class="btn btn-copy" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i> 전체 복사하기
+                        </button>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="previousStep()">
+                            <i class="fas fa-arrow-left"></i> 이전
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetWizard()">
+                            <i class="fas fa-redo"></i> 다시 하기
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let selectedColor = '#fff3cd';
-        let notes = [];
-        let isDragging = false;
-        let currentNote = null;
-        let offset = { x: 0, y: 0 };
+        let currentStep = 1;
+        const totalSteps = 4;
+        let savedData = {
+            rootCause: '',
+            independentVar: '',
+            dependentVar: '',
+            researchQuestion: '',
+            finalResult: ''
+        };
 
         // 세션 확인 및 로그인 체크
         const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
@@ -402,6 +766,11 @@
             alert('로그인이 필요합니다.');
             window.location.href = 'login.html';
         }
+
+        const CLASS_ID = session.classId || 'default';
+        const USER_ID = session.userId || session.id || 'user_' + Date.now();
+        const USER_NAME = session.name || '익명';
+        const PRACTICE_TYPE = 'practice4';
 
         // 관리자 페이지 버튼 표시 (강사/관리자만)
         const practice4AdminButton = document.getElementById('practice4AdminButton');
@@ -411,19 +780,6 @@
             } else {
                 practice4AdminButton.style.display = 'none';
             }
-        }
-
-        const CLASS_ID = session.classId || 'default';
-        const STORAGE_KEY = `wallboard_practice4_${CLASS_ID}`;
-        const USER_ID_KEY = `user_id_practice4_${CLASS_ID}`;
-        const PRACTICE_TYPE = 'practice4';
-        const SYNC_INTERVAL = 2000;
-
-        // 사용자 ID 생성 (없으면 생성)
-        let userId = localStorage.getItem(USER_ID_KEY);
-        if (!userId) {
-            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem(USER_ID_KEY, userId);
         }
 
         // Supabase 클라이언트 가져오기
@@ -440,9 +796,6 @@
             return null;
         }
 
-        // Supabase Realtime 구독 변수
-        let realtimeSubscription = null;
-
         // 새창으로 열기 함수
         function openInNewWindow(url) {
             window.open(url, '_blank', 'noopener,noreferrer');
@@ -455,10 +808,10 @@
             });
             document.getElementById(`content${num}`).classList.add('active');
             
-            // 담벼락인 경우 데이터 렌더링
+            // 연구 주제 연결 활동인 경우 데이터 로드
             if (num === 3) {
-                renderNotes();
-                updateStats();
+                loadExistingData();
+                updateProgress();
             }
         }
 
@@ -469,428 +822,681 @@
             });
         }
 
-        function selectColor(color) {
-            selectedColor = color;
-            document.querySelectorAll('.color-option').forEach(option => {
-                option.classList.remove('selected');
-            });
-            document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+        // 진행 상태 업데이트
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            // 단계 라벨 업데이트
+            for (let i = 1; i <= totalSteps; i++) {
+                const label = document.getElementById(`step${i}-label`);
+                if (i <= currentStep) {
+                    label.classList.add('active');
+                } else {
+                    label.classList.remove('active');
+                }
+            }
         }
 
-        async function loadWallboardData() {
-            // 먼저 Supabase에서 데이터 로드 시도
+        // 다음 단계
+        async function nextStep(step) {
+            if (step === 2) {
+                const rootCause = document.getElementById('rootCause').value.trim();
+                if (!rootCause) {
+                    alert('근본 원인을 입력해주세요.');
+                    return;
+                }
+                savedData.rootCause = rootCause;
+                // 자동 저장
+                await autoSaveData();
+            } else if (step === 3) {
+                const independentVar = document.getElementById('independentVar').value.trim();
+                const dependentVar = document.getElementById('dependentVar').value.trim();
+                if (!independentVar || !dependentVar) {
+                    alert('독립변인과 종속변인을 모두 입력해주세요.');
+                    return;
+                }
+                savedData.independentVar = independentVar;
+                savedData.dependentVar = dependentVar;
+                
+                // 자동 생성된 연구 질문 미리보기
+                const autoQuestion = `"${independentVar}" 은/는 "${dependentVar}"에 어떤 영향을 미치는가?`;
+                document.getElementById('researchQuestionPreview').textContent = autoQuestion;
+                document.getElementById('researchQuestion').value = autoQuestion;
+                savedData.researchQuestion = autoQuestion;
+                // 자동 저장
+                await autoSaveData();
+            } else if (step === 4) {
+                const researchQuestion = document.getElementById('researchQuestion').value.trim();
+                if (!researchQuestion) {
+                    alert('연구 질문을 입력해주세요.');
+                    return;
+                }
+                savedData.researchQuestion = researchQuestion;
+                
+                // 최종 결과물 생성
+                const researchTopic = `본 연구는 "${savedData.independentVar}"을(를) 적용한 수업이 "${savedData.dependentVar}"에 미치는 영향을 탐색하고자 한다.`;
+                const finalQuestion = `"${savedData.independentVar}"에 따라 "${savedData.dependentVar}"은(는) 어떻게 변화하는가?`;
+                
+                document.getElementById('finalResearchTopic').textContent = researchTopic;
+                document.getElementById('finalResearchQuestion').textContent = finalQuestion;
+                
+                savedData.finalResult = {
+                    researchTopic: researchTopic,
+                    researchQuestion: finalQuestion
+                };
+                // 자동 저장
+                await autoSaveData();
+            }
+            
+            // 단계 전환
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${step}`).classList.add('active');
+            currentStep = step;
+            updateProgress();
+        }
+
+        // 이전 단계
+        function previousStep() {
+            if (currentStep > 1) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep--;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgress();
+            }
+        }
+
+        // 클립보드에 복사
+        function copyToClipboard() {
+            const researchTopic = document.getElementById('finalResearchTopic').textContent;
+            const researchQuestion = document.getElementById('finalResearchQuestion').textContent;
+            const textToCopy = `[연구 주제]\n${researchTopic}\n\n[연구 질문]\n${researchQuestion}`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert('클립보드에 복사되었습니다!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('클립보드에 복사되었습니다!');
+            });
+        }
+
+        // 변인 검증 및 조언 함수
+        function validateVariable(type) {
+            const input = document.getElementById(type === 'independent' ? 'independentVar' : 'dependentVar');
+            const adviceBox = document.getElementById(type === 'independent' ? 'independentAdvice' : 'dependentAdvice');
+            const value = input.value.trim();
+            
+            // 입력이 없으면 조언 숨기기
+            if (!value) {
+                adviceBox.classList.remove('show');
+                return;
+            }
+
+            let advice = '';
+            let adviceType = 'warning';
+            let suggestion = '';
+            
+            if (type === 'independent') {
+                // 독립변인 검증
+                if (value.length < 5) {
+                    advice = '❌ 입력이 너무 짧습니다. 더 구체적으로 작성해주세요.';
+                    adviceType = 'error';
+                    suggestion = '예: "집중 시간을 고려한 10분 단위 모듈 수업 설계"';
+                } else if (value.includes('결과') || value.includes('효과') || value.includes('영향')) {
+                    advice = '⚠️ 독립변인은 "원인"이 되어야 합니다. 현재 입력이 결과나 효과를 나타내는 것 같습니다.';
+                    adviceType = 'warning';
+                    suggestion = '수업에서 선생님이 시도하거나 변화를 줄 수 있는 구체적인 방법을 적어주세요.';
+                } else if (!value.includes('수업') && !value.includes('학습') && !value.includes('방법') && !value.includes('활동')) {
+                    advice = '💡 수업과 관련된 구체적인 방법이나 활동을 명시하는 것이 좋습니다.';
+                    adviceType = 'warning';
+                    suggestion = '예: "협동 학습 기반 수업 방법", "게임화를 통한 학습 활동"';
+                } else {
+                    advice = '✅ 좋습니다! 선생님이 수업에서 시도할 수 있는 구체적인 방법이 잘 표현되었습니다.';
+                    adviceType = 'success';
+                }
+            } else {
+                // 종속변인 검증
+                if (value.length < 5) {
+                    advice = '❌ 입력이 너무 짧습니다. 더 구체적으로 작성해주세요.';
+                    adviceType = 'error';
+                    suggestion = '예: "학생들의 수업 참여 빈도와 적극성"';
+                } else if (value.includes('시도') || value.includes('적용') || value.includes('변화를 줄')) {
+                    advice = '⚠️ 종속변인은 "결과"를 나타내야 합니다. 현재 입력이 방법이나 원인을 나타내는 것 같습니다.';
+                    adviceType = 'warning';
+                    suggestion = '학생들에게서 관찰하고 싶은 변화나 결과를 적어주세요.';
+                } else if (!value.includes('학생') && !value.includes('참여') && !value.includes('성취') && !value.includes('태도')) {
+                    advice = '💡 학생들에게서 나타날 변화나 결과를 더 명확하게 표현하면 좋습니다.';
+                    adviceType = 'warning';
+                    suggestion = '예: "학생들의 수업 참여도", "학습 성취도", "학습 동기"';
+                } else {
+                    advice = '✅ 좋습니다! 학생들에게서 관찰하고 싶은 변화가 잘 표현되었습니다.';
+                    adviceType = 'success';
+                }
+            }
+            
+            // 조언 표시
+            let html = `
+                <div class="advice-title">
+                    ${advice.split(' ')[0]}
+                    </div>
+                <div class="advice-content">
+                    ${advice.substring(advice.indexOf(' ') + 1)}
+                </div>
+            `;
+            
+            if (suggestion && adviceType !== 'success') {
+                html += `
+                    <div class="suggestion-box">
+                        <div class="suggestion-title">💡 개선 제안:</div>
+                        <div class="suggestion-text">${suggestion}</div>
+                        <button class="copy-suggestion-btn" onclick="copySuggestion('${suggestion.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-copy"></i> 제안 복사하기
+                        </button>
+                    </div>
+                `;
+            }
+            
+            adviceBox.innerHTML = html;
+            adviceBox.className = `advice-box ${adviceType} show`;
+        }
+
+        // 제안 복사 함수
+        function copySuggestion(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('제안이 클립보드에 복사되었습니다!');
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('제안이 클립보드에 복사되었습니다!');
+            });
+        }
+
+        // 자동 저장 타이머 (디바운스)
+        let autoSaveTimer = null;
+
+        // 디바운스를 사용한 자동 저장
+        function debounceAutoSave(fieldName) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                updateSavedDataFromInput(fieldName);
+                autoSaveData();
+            }, 1000); // 1초 후 저장
+        }
+
+        // 입력 필드에서 데이터 업데이트
+        function updateSavedDataFromInput(fieldName) {
+            if (fieldName === 'rootCause') {
+                savedData.rootCause = document.getElementById('rootCause').value.trim();
+            } else if (fieldName === 'independentVar') {
+                savedData.independentVar = document.getElementById('independentVar').value.trim();
+            } else if (fieldName === 'dependentVar') {
+                savedData.dependentVar = document.getElementById('dependentVar').value.trim();
+            } else if (fieldName === 'researchQuestion') {
+                savedData.researchQuestion = document.getElementById('researchQuestion').value.trim();
+            }
+        }
+
+        // 자동 저장 함수
+        async function autoSaveData() {
             const supabaseClient = getSupabaseClient();
+            
+            // 최종 결과물도 업데이트 (Step 4인 경우)
+            if (currentStep === 4 && savedData.independentVar && savedData.dependentVar) {
+                const researchTopic = `본 연구는 "${savedData.independentVar}"을(를) 적용한 수업이 "${savedData.dependentVar}"에 미치는 영향을 탐색하고자 한다.`;
+                const finalQuestion = `"${savedData.independentVar}"에 따라 "${savedData.dependentVar}"은(는) 어떻게 변화하는가?`;
+                
+                savedData.finalResult = {
+                    researchTopic: researchTopic,
+                    researchQuestion: finalQuestion
+                };
+            }
+            
+            const userData = {
+                userId: USER_ID,
+                userName: USER_NAME,
+                rootCause: savedData.rootCause,
+                independentVar: savedData.independentVar,
+                dependentVar: savedData.dependentVar,
+                researchQuestion: savedData.researchQuestion,
+                finalResult: savedData.finalResult,
+                timestamp: Date.now(),
+                currentStep: currentStep // 현재 단계 정보도 저장
+            };
+            
             if (supabaseClient) {
                 try {
-                    const { data: supabaseData, error } = await supabaseClient
+                    // 기존 데이터 로드
+                    const { data: existingData, error: fetchError } = await supabaseClient
                         .from('practice_data')
                         .select('data')
                         .eq('class_id', CLASS_ID)
                         .eq('practice_type', PRACTICE_TYPE)
                         .single();
                     
-                    if (!error && supabaseData && supabaseData.data) {
-                        // Supabase 데이터를 사용
-                        const practiceData = supabaseData.data;
-                        notes = practiceData.notes || [];
-                        
-                        // localStorage에도 동기화
-                        const data = {
-                            notes: notes,
-                            lastUpdate: practiceData.lastUpdate || Date.now()
-                        };
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                        
-                        renderNotes();
-                        updateStats();
-                        return;
-                    }
-                } catch (error) {
-                    console.error('Supabase 데이터 로드 오류:', error);
-                }
-            }
-            
-            // Supabase를 사용할 수 없으면 localStorage에서 로드
-            const data = localStorage.getItem(STORAGE_KEY);
-            if (data) {
-                const parsed = JSON.parse(data);
-                notes = parsed.notes || [];
-            }
-            renderNotes();
-            updateStats();
-        }
-
-        async function saveWallboardData() {
-            const data = {
-                notes: notes,
-                lastUpdate: Date.now()
-            };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-            
-            // Supabase에 저장
-            const supabaseClient = getSupabaseClient();
-            if (supabaseClient) {
-                try {
-                    const practiceData = {
-                        notes: notes,
-                        lastUpdate: Date.now()
-                    };
+                    let practiceData = { students: {} };
                     
-                    // UPSERT: 있으면 업데이트, 없으면 삽입
-                    const { error } = await supabaseClient
-                        .from('practice_data')
-                        .upsert({
-                            class_id: CLASS_ID,
-                            practice_type: PRACTICE_TYPE,
-                            data: practiceData
-                        }, {
-                            onConflict: 'class_id,practice_type'
-                        });
-                    
-                    if (error) {
-                        console.error('Supabase 저장 오류:', error);
-                    } else {
-                        console.log('✅ Supabase에 데이터 저장 성공');
-                    }
-                } catch (error) {
-                    console.error('Supabase 저장 예외:', error);
-                }
-            }
-        }
-
-        // 카드 위치 계산 (겹치지 않게 배치)
-        function calculateCardPosition(existingNotes) {
-            const CARD_WIDTH = 250;
-            const CARD_HEIGHT = 150;
-            const PADDING = 20;
-            
-            const wallboard = document.getElementById('wallboard');
-            if (!wallboard) {
-                return { x: PADDING, y: PADDING };
-            }
-            
-            const wallboardRect = wallboard.getBoundingClientRect();
-            const WALLBOARD_WIDTH = wallboardRect.width - (PADDING * 2);
-            const WALLBOARD_HEIGHT = Math.max(600, wallboard.scrollHeight || 600);
-            
-            const cols = Math.max(1, Math.floor((WALLBOARD_WIDTH) / (CARD_WIDTH + PADDING)));
-            const rows = Math.max(1, Math.floor((WALLBOARD_HEIGHT) / (CARD_HEIGHT + PADDING)));
-            
-            const occupied = new Set();
-            existingNotes.forEach(note => {
-                const col = Math.floor((note.x - PADDING) / (CARD_WIDTH + PADDING));
-                const row = Math.floor((note.y - PADDING) / (CARD_HEIGHT + PADDING));
-                if (col >= 0 && row >= 0) {
-                    occupied.add(`${col},${row}`);
-                }
-            });
-            
-            for (let row = 0; row < rows * 20; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const key = `${col},${row}`;
-                    if (!occupied.has(key)) {
-                        const x = col * (CARD_WIDTH + PADDING) + PADDING;
-                        const y = row * (CARD_HEIGHT + PADDING) + PADDING;
-                        if (x + CARD_WIDTH <= WALLBOARD_WIDTH + PADDING) {
-                            return { x, y };
+                    // 기존 데이터가 있으면 사용, 없으면 새로 생성
+                    if (!fetchError && existingData && existingData.data) {
+                        // JSON 문자열인 경우 파싱
+                        if (typeof existingData.data === 'string') {
+                            try {
+                                practiceData = JSON.parse(existingData.data);
+                            } catch (e) {
+                                console.error('데이터 파싱 오류:', e);
+                                practiceData = { students: {} };
+                            }
+                        } else {
+                            practiceData = existingData.data;
                         }
                     }
-                }
-            }
-            
-            if (existingNotes.length > 0) {
-                let maxY = 0;
-                existingNotes.forEach(note => {
-                    if (note.y > maxY) {
-                        maxY = note.y;
-                    }
-                });
-                return {
-                    x: PADDING,
-                    y: maxY + CARD_HEIGHT + PADDING
-                };
-            }
-            
-            return { x: PADDING, y: PADDING };
-        }
-        
-        // wallboard 높이 자동 조절
-        function adjustWallboardHeight(notes) {
-            const wallboard = document.getElementById('wallboard');
-            if (!wallboard || !notes || notes.length === 0) {
-                return;
-            }
-            
-            const CARD_HEIGHT = 150;
-            const PADDING = 20;
-            
-            let maxY = 0;
-            notes.forEach(note => {
-                const cardBottom = note.y + CARD_HEIGHT;
-                if (cardBottom > maxY) {
-                    maxY = cardBottom;
-                }
-            });
-            
-            const minHeight = 600;
-            const requiredHeight = maxY + PADDING;
-            const finalHeight = Math.max(minHeight, requiredHeight);
-            
-            wallboard.style.minHeight = finalHeight + 'px';
-        }
-
-        async function addNote() {
-            const input = document.getElementById('pasteInput');
-            const content = input.value.trim();
-            
-            if (!content) {
-                alert('내용을 입력해주세요.');
-                return;
-            }
-
-            // 겹치지 않는 위치 계산
-            const position = calculateCardPosition(notes);
-
-            const note = {
-                id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                content: content,
-                color: selectedColor,
-                x: position.x,
-                y: position.y,
-                userId: userId,
-                userName: session.name || '익명',
-                timestamp: Date.now()
-            };
-
-            notes.push(note);
-            await saveWallboardData();
-            renderNotes();
-            updateStats();
-            
-            input.value = '';
-        }
-
-        function renderNotes() {
-            const wallboard = document.getElementById('wallboard');
-            wallboard.innerHTML = '';
-            
-            // 모든 수강생이 입력한 메모 모두 표시 (실습 1, 2와 동일)
-            let visibleNotes = notes || [];
-            
-            visibleNotes.forEach(note => {
-                const noteDiv = document.createElement('div');
-                noteDiv.className = 'note';
-                noteDiv.id = note.id;
-                noteDiv.style.left = note.x + 'px';
-                noteDiv.style.top = note.y + 'px';
-                noteDiv.style.backgroundColor = note.color;
-                
-                // 이미지 처리
-                let content = note.content;
-                const imgRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
-                content = content.replace(imgRegex, '<img src="$1" alt="이미지">');
-                
-                // 본인 작성 표기
-                const isOwnNote = note.userId === userId;
-                const ownBadge = isOwnNote 
-                    ? '<span style="font-size: 0.7em; color: #667eea; font-weight: bold; margin-left: 5px;">(본인 작성)</span>' 
-                    : '';
-                
-                // 삭제 버튼 (본인 또는 강사/관리자만)
-                const canDelete = (session.type === 'teacher' || session.type === 'admin' || isOwnNote);
-                const deleteButton = canDelete 
-                    ? `<button class="note-delete" onclick="deleteNote('${note.id}')" title="삭제">×</button>`
-                    : '';
-                
-                noteDiv.innerHTML = `
-                    <div class="note-header">
-                        <span class="note-color" style="background: ${note.color};"></span>
-                        ${ownBadge}
-                        ${deleteButton}
-                    </div>
-                    <div class="note-content">${content.replace(/\n/g, '<br>')}</div>
-                `;
-                
-                // 드래그 이벤트
-                noteDiv.addEventListener('mousedown', startDrag);
-                
-                wallboard.appendChild(noteDiv);
-            });
-            
-            // wallboard 높이 자동 조절
-            adjustWallboardHeight(visibleNotes);
-        }
-
-        function startDrag(e) {
-            if (e.target.classList.contains('note-delete')) return;
-            
-            isDragging = true;
-            currentNote = e.currentTarget;
-            const rect = currentNote.getBoundingClientRect();
-            const wallboard = document.getElementById('wallboard');
-            const wallboardRect = wallboard.getBoundingClientRect();
-            
-            offset.x = e.clientX - rect.left;
-            offset.y = e.clientY - rect.top;
-            
-            currentNote.style.zIndex = 1000;
-            
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', stopDrag);
-        }
-
-        function drag(e) {
-            if (!isDragging || !currentNote) return;
-            
-            const wallboard = document.getElementById('wallboard');
-            const wallboardRect = wallboard.getBoundingClientRect();
-            
-            let x = e.clientX - wallboardRect.left - offset.x;
-            let y = e.clientY - wallboardRect.top - offset.y;
-            
-            // 경계 체크
-            x = Math.max(0, Math.min(x, wallboardRect.width - currentNote.offsetWidth));
-            y = Math.max(0, Math.min(y, wallboardRect.height - currentNote.offsetHeight));
-            
-            currentNote.style.left = x + 'px';
-            currentNote.style.top = y + 'px';
-        }
-
-        async function stopDrag() {
-            if (currentNote) {
-                const noteId = currentNote.id;
-                const note = notes.find(n => n.id === noteId);
-                if (note) {
-                    const wallboard = document.getElementById('wallboard');
-                    const wallboardRect = wallboard.getBoundingClientRect();
-                    const noteRect = currentNote.getBoundingClientRect();
                     
-                    note.x = noteRect.left - wallboardRect.left;
-                    note.y = noteRect.top - wallboardRect.top;
-                    await saveWallboardData();
-                }
-                currentNote.style.zIndex = 10;
-            }
-            
-            isDragging = false;
-            currentNote = null;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDrag);
-        }
-
-        async function deleteNote(noteId) {
-            const noteToDelete = notes.find(note => note.id === noteId);
-            if (!noteToDelete) {
-                alert('해당 메모를 찾을 수 없습니다.');
-                return;
-            }
-
-            // 권한 확인 (표시는 모두 보이지만 삭제는 본인만)
-            if (session.type === 'student' && noteToDelete.userId !== userId) {
-                alert('자신이 작성한 메모만 삭제할 수 있습니다.');
-                return;
-            }
-
-            if (!confirm('이 메모를 삭제하시겠습니까?')) return;
-            
-            notes = notes.filter(note => note.id !== noteId);
-            await saveWallboardData();
-            renderNotes();
-            updateStats();
-        }
-
-        function updateStats() {
-            // 모든 카드 카운트
-            let visibleNotes = notes || [];
-            
-            document.getElementById('noteCount').textContent = visibleNotes.length;
-            
-            // 참여자 수 계산
-            const participants = new Set(visibleNotes.map(note => note.userId));
-            document.getElementById('participantCount').textContent = participants.size;
-        }
-        
-        // Supabase Realtime 구독 설정
-        function setupRealtimeSubscription() {
-            const supabaseClient = getSupabaseClient();
-            if (!supabaseClient) {
-                console.warn('Supabase 클라이언트를 사용할 수 없습니다.');
-                return;
-            }
-
-            // 기존 구독이 있으면 해제
-            if (realtimeSubscription) {
-                supabaseClient.removeChannel(realtimeSubscription);
-            }
-
-            // Realtime 구독 시작
-            realtimeSubscription = supabaseClient
-                .channel(`practice_data_${CLASS_ID}_${PRACTICE_TYPE}`)
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'practice_data',
-                        filter: `class_id=eq.${CLASS_ID} AND practice_type=eq.${PRACTICE_TYPE}`
-                    },
-                    async (payload) => {
-                        console.log('🔄 실시간 업데이트 수신:', payload);
-                        await loadWallboardData();
+                    // 해당 사용자 데이터 업데이트
+                    if (!practiceData.students) {
+                        practiceData.students = {};
                     }
-                )
-                .subscribe((status) => {
-                    console.log('📡 Realtime 구독 상태:', status);
-                });
-        }
-
-        // 이미지 붙여넣기 처리
-        document.getElementById('pasteInput').addEventListener('paste', function(e) {
-            const items = e.clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const imgUrl = event.target.result;
-                        const input = document.getElementById('pasteInput');
-                        input.value = imgUrl + '\n' + input.value;
-                    };
-                    reader.readAsDataURL(blob);
-                    e.preventDefault();
+                    practiceData.students[USER_ID] = userData;
+                    practiceData.lastUpdate = Date.now();
+                    
+                    // Supabase에 저장 (upsert 대신 insert/update 분리)
+                    let upsertError = null;
+                    
+                    if (fetchError && fetchError.code === 'PGRST116') {
+                        // 데이터가 없으면 insert
+                        const { error: insertError } = await supabaseClient
+                            .from('practice_data')
+                            .insert({
+                                class_id: CLASS_ID,
+                                practice_type: PRACTICE_TYPE,
+                                data: practiceData
+                            });
+                        upsertError = insertError;
+                    } else {
+                        // 데이터가 있으면 update
+                        const { error: updateError } = await supabaseClient
+                            .from('practice_data')
+                            .update({
+                                data: practiceData,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('class_id', CLASS_ID)
+                            .eq('practice_type', PRACTICE_TYPE);
+                        upsertError = updateError;
+                    }
+                    
+                    if (upsertError) {
+                        console.error('자동 저장 오류:', upsertError);
+                    } else {
+                        console.log('✅ 자동 저장 성공');
+                    }
+                } catch (error) {
+                    console.error('자동 저장 예외:', error);
                 }
             }
-        });
+            
+            // localStorage 백업 (항상 저장)
+            const storageKey = `practice4_${CLASS_ID}_${USER_ID}`;
+            localStorage.setItem(storageKey, JSON.stringify(userData));
+        }
 
-        // 초기화 및 주기적 업데이트
-        window.addEventListener('load', async function() {
-            await loadWallboardData();
-            
-            // Supabase Realtime 구독 설정
-            setupRealtimeSubscription();
-            
-            // 주기적으로 동기화 (Realtime이 실패할 경우를 대비)
-            setInterval(async function() {
-                await loadWallboardData();
-            }, SYNC_INTERVAL);
-            
-            // 다른 탭에서의 변경사항 감지 (localStorage 백업)
-            window.addEventListener('storage', async function(e) {
-                if (e.key === STORAGE_KEY) {
-                    await loadWallboardData();
+        // PDF 생성 및 다운로드 (html2canvas를 사용하여 한글 깨짐 방지) - 사용 안 함
+        async function generatePDF() {
+            try {
+                // PDF로 변환할 컨테이너 생성
+                const pdfContainer = document.createElement('div');
+                pdfContainer.style.position = 'absolute';
+                pdfContainer.style.left = '-9999px';
+                pdfContainer.style.top = '0';
+                pdfContainer.style.width = '210mm'; // A4 가로 크기
+                pdfContainer.style.backgroundColor = 'white';
+                pdfContainer.style.padding = '40px';
+                pdfContainer.style.fontFamily = 'Arial, "Malgun Gothic", "맑은 고딕", sans-serif';
+                pdfContainer.style.color = '#333';
+                pdfContainer.style.lineHeight = '1.6';
+                
+                // 제목
+                const titleDiv = document.createElement('div');
+                titleDiv.style.textAlign = 'center';
+                titleDiv.style.fontSize = '24px';
+                titleDiv.style.fontWeight = 'bold';
+                titleDiv.style.color = '#6bc4a9';
+                titleDiv.style.marginBottom = '30px';
+                titleDiv.textContent = '연구 주제 연결 활동 결과물';
+                pdfContainer.appendChild(titleDiv);
+                
+                // 작성자 정보
+                const infoDiv = document.createElement('div');
+                infoDiv.style.marginBottom = '30px';
+                infoDiv.style.fontSize = '14px';
+                infoDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;"><strong>작성자:</strong> ${USER_NAME}</div>
+                    <div><strong>작성 일시:</strong> ${new Date().toLocaleString('ko-KR')}</div>
+                `;
+                pdfContainer.appendChild(infoDiv);
+                
+                // Step 1
+                const step1Div = document.createElement('div');
+                step1Div.style.marginBottom = '25px';
+                step1Div.style.padding = '20px';
+                step1Div.style.backgroundColor = '#f9f9f9';
+                step1Div.style.borderRadius = '10px';
+                step1Div.innerHTML = `
+                    <h3 style="color: #6bc4a9; font-size: 18px; margin-bottom: 15px;">Step 1: 마음 열기 (근본 원인)</h3>
+                    <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${savedData.rootCause || '미입력'}</div>
+                `;
+                pdfContainer.appendChild(step1Div);
+                
+                // Step 2
+                const step2Div = document.createElement('div');
+                step2Div.style.marginBottom = '25px';
+                step2Div.style.padding = '20px';
+                step2Div.style.backgroundColor = '#f9f9f9';
+                step2Div.style.borderRadius = '10px';
+                step2Div.innerHTML = `
+                    <h3 style="color: #6bc4a9; font-size: 18px; margin-bottom: 15px;">Step 2: 변수 분리하기</h3>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">독립변인:</div>
+                        <div style="font-size: 14px; line-height: 1.8;">${savedData.independentVar || '미입력'}</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">종속변인:</div>
+                        <div style="font-size: 14px; line-height: 1.8;">${savedData.dependentVar || '미입력'}</div>
+                    </div>
+                `;
+                pdfContainer.appendChild(step2Div);
+                
+                // Step 3
+                const step3Div = document.createElement('div');
+                step3Div.style.marginBottom = '25px';
+                step3Div.style.padding = '20px';
+                step3Div.style.backgroundColor = '#f9f9f9';
+                step3Div.style.borderRadius = '10px';
+                step3Div.innerHTML = `
+                    <h3 style="color: #6bc4a9; font-size: 18px; margin-bottom: 15px;">Step 3: 연구 질문</h3>
+                    <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;">${savedData.researchQuestion || '미입력'}</div>
+                `;
+                pdfContainer.appendChild(step3Div);
+                
+                // Step 4
+                if (savedData.finalResult && savedData.finalResult.researchTopic) {
+                    const step4Div = document.createElement('div');
+                    step4Div.style.marginBottom = '25px';
+                    step4Div.style.padding = '30px';
+                    step4Div.style.backgroundColor = '#88d8c0';
+                    step4Div.style.borderRadius = '15px';
+                    step4Div.style.color = 'white';
+                    step4Div.innerHTML = `
+                        <h3 style="font-size: 20px; margin-bottom: 20px;">Step 4: 최종 결과물</h3>
+                        <div style="background: rgba(255, 255, 255, 0.2); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                            <div style="font-weight: bold; margin-bottom: 10px; font-size: 16px;">[연구 주제]</div>
+                            <div style="font-size: 14px; line-height: 1.8;">${savedData.finalResult.researchTopic}</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.2); padding: 20px; border-radius: 10px;">
+                            <div style="font-weight: bold; margin-bottom: 10px; font-size: 16px;">[연구 질문]</div>
+                            <div style="font-size: 14px; line-height: 1.8;">${savedData.finalResult.researchQuestion}</div>
+                        </div>
+                    `;
+                    pdfContainer.appendChild(step4Div);
                 }
-            });
-        });
+                
+                // DOM에 추가
+                document.body.appendChild(pdfContainer);
+                
+                // html2canvas로 이미지 변환
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false
+                });
+                
+                // 이미지를 PDF로 변환
+                const { jsPDF } = window.jspdf;
+                const imgData = canvas.toDataURL('image/png');
+                
+                // A4 크기 계산 (mm)
+                const imgWidth = 210; // A4 가로 mm
+                const pageHeight = 297; // A4 세로 mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                
+                const doc = new jsPDF('p', 'mm', 'a4');
+                let position = 0;
+                
+                // 첫 페이지 추가
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // 여러 페이지가 필요한 경우
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                // PDF 저장
+                const fileName = `연구주제_${USER_NAME}_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                
+                // 임시 컨테이너 제거
+                document.body.removeChild(pdfContainer);
+            } catch (error) {
+                console.error('PDF 생성 오류:', error);
+                alert('PDF 생성 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
+            }
+        }
 
-        // 페이지 언로드 시 구독 해제
-        window.addEventListener('beforeunload', function() {
-            if (realtimeSubscription) {
+
+        // 다시 하기
+        async function resetWizard() {
+            if (confirm('정말로 처음부터 다시 시작하시겠습니까? 입력한 내용이 모두 삭제됩니다.')) {
+                currentStep = 1;
+                savedData = {
+                    rootCause: '',
+                    independentVar: '',
+                    dependentVar: '',
+                    researchQuestion: '',
+                    finalResult: ''
+                };
+                
+                document.getElementById('rootCause').value = '';
+                document.getElementById('independentVar').value = '';
+                document.getElementById('dependentVar').value = '';
+                document.getElementById('researchQuestion').value = '';
+                
+                // 모든 단계 숨기고 첫 단계만 표시
+                for (let i = 1; i <= totalSteps; i++) {
+                    document.getElementById(`step${i}`).classList.remove('active');
+                }
+                document.getElementById('step1').classList.add('active');
+                updateProgress();
+                
+                // 저장된 데이터 삭제
                 const supabaseClient = getSupabaseClient();
                 if (supabaseClient) {
-                    supabaseClient.removeChannel(realtimeSubscription);
+                    try {
+                        const { data: existingData, error: fetchError } = await supabaseClient
+                            .from('practice_data')
+                            .select('data')
+                            .eq('class_id', CLASS_ID)
+                            .eq('practice_type', PRACTICE_TYPE)
+                            .single();
+                        
+                        if (!fetchError && existingData && existingData.data) {
+                            let practiceData = existingData.data;
+                            if (typeof practiceData === 'string') {
+                                practiceData = JSON.parse(practiceData);
+                            }
+                            
+                            if (practiceData.students && practiceData.students[USER_ID]) {
+                                delete practiceData.students[USER_ID];
+                                practiceData.lastUpdate = Date.now();
+                                
+                                await supabaseClient
+                                    .from('practice_data')
+                                    .update({
+                                        data: practiceData,
+                                        updated_at: new Date().toISOString()
+                                    })
+                                    .eq('class_id', CLASS_ID)
+                                    .eq('practice_type', PRACTICE_TYPE);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('데이터 삭제 오류:', error);
+                    }
+                }
+                
+                // localStorage도 삭제
+                const storageKey = `practice4_${CLASS_ID}_${USER_ID}`;
+                localStorage.removeItem(storageKey);
+            }
+        }
+
+        // 기존 데이터 로드 (수강생만 자신의 데이터 로드)
+        async function loadExistingData() {
+            if (session.type !== 'student') {
+                return; // 강사/관리자는 로드하지 않음
+            }
+            
+            // 먼저 localStorage에서 로드 (빠른 복원)
+            const storageKey = `practice4_${CLASS_ID}_${USER_ID}`;
+            const localData = localStorage.getItem(storageKey);
+            if (localData) {
+                try {
+                    const userData = JSON.parse(localData);
+                    restoreDataFromSaved(userData);
+                } catch (e) {
+                    console.error('로컬 데이터 파싱 오류:', e);
                 }
             }
-        });
+            
+            // Supabase에서 최신 데이터 로드
+            const supabaseClient = getSupabaseClient();
+            
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('data')
+                        .eq('class_id', CLASS_ID)
+                        .eq('practice_type', PRACTICE_TYPE)
+                        .single();
+                    
+                    if (!error && data && data.data) {
+                        // JSON 문자열인 경우 파싱
+                        let practiceData = data.data;
+                        if (typeof practiceData === 'string') {
+                            try {
+                                practiceData = JSON.parse(practiceData);
+                            } catch (e) {
+                                console.error('데이터 파싱 오류:', e);
+                return;
+                            }
+                        }
+                        
+                        if (practiceData.students && practiceData.students[USER_ID]) {
+                            const userData = practiceData.students[USER_ID];
+                            restoreDataFromSaved(userData);
+                        }
+                    }
+                } catch (error) {
+                    console.error('데이터 로드 오류:', error);
+                }
+            }
+        }
+
+        // 저장된 데이터로 복원
+        function restoreDataFromSaved(userData) {
+            // 데이터 복원
+            savedData.rootCause = userData.rootCause || '';
+            savedData.independentVar = userData.independentVar || '';
+            savedData.dependentVar = userData.dependentVar || '';
+            savedData.researchQuestion = userData.researchQuestion || '';
+            savedData.finalResult = userData.finalResult || {};
+            
+            // 입력 필드에 채우기
+            if (document.getElementById('rootCause')) {
+                document.getElementById('rootCause').value = savedData.rootCause;
+            }
+            if (document.getElementById('independentVar')) {
+                document.getElementById('independentVar').value = savedData.independentVar;
+            }
+            if (document.getElementById('dependentVar')) {
+                document.getElementById('dependentVar').value = savedData.dependentVar;
+            }
+            
+            // 현재 단계 정보가 있으면 그것을 사용, 없으면 데이터로 추론
+            let targetStep = userData.currentStep || 1;
+            
+            if (!userData.currentStep) {
+                // 데이터로 단계 추론
+                if (savedData.finalResult && savedData.finalResult.researchTopic) {
+                    targetStep = 4;
+                } else if (savedData.researchQuestion) {
+                    targetStep = 3;
+                } else if (savedData.independentVar && savedData.dependentVar) {
+                    targetStep = 2;
+                } else if (savedData.rootCause) {
+                    targetStep = 2;
+                }
+            }
+            
+            // 해당 단계로 이동
+            if (targetStep >= 1 && targetStep <= 4) {
+                // 모든 단계 숨기기
+                for (let i = 1; i <= 4; i++) {
+                    const stepEl = document.getElementById(`step${i}`);
+                    if (stepEl) {
+                        stepEl.classList.remove('active');
+                    }
+                }
+                
+                // 목표 단계 표시
+                const targetStepEl = document.getElementById(`step${targetStep}`);
+                if (targetStepEl) {
+                    targetStepEl.classList.add('active');
+                    currentStep = targetStep;
+                    
+                    // Step 3인 경우 미리보기 업데이트
+                    if (targetStep === 3 && savedData.independentVar && savedData.dependentVar) {
+                        const autoQuestion = `"${savedData.independentVar}" 은/는 "${savedData.dependentVar}"에 어떤 영향을 미치는가?`;
+                        const previewEl = document.getElementById('researchQuestionPreview');
+                        if (previewEl) {
+                            previewEl.textContent = autoQuestion;
+                        }
+                        const questionEl = document.getElementById('researchQuestion');
+                        if (questionEl && !questionEl.value) {
+                            questionEl.value = savedData.researchQuestion || autoQuestion;
+                        }
+                    }
+                    
+                    // Step 4인 경우 최종 결과물 표시
+                    if (targetStep === 4 && savedData.finalResult && savedData.finalResult.researchTopic) {
+                        const topicEl = document.getElementById('finalResearchTopic');
+                        const questionEl = document.getElementById('finalResearchQuestion');
+                        if (topicEl) {
+                            topicEl.textContent = savedData.finalResult.researchTopic;
+                        }
+                        if (questionEl) {
+                            questionEl.textContent = savedData.finalResult.researchQuestion;
+                        }
+                    }
+                    
+                    updateProgress();
+                }
+            }
+        }
     </script>
 </body>
 </html>

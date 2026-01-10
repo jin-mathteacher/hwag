@@ -6,6 +6,9 @@
     <title>총 관리자 대시보드</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
     <style>
         * {
             margin: 0;
@@ -470,15 +473,87 @@
             window.location.href = 'login.html';
         }
 
-        function getAllTeachers() {
+        // Supabase 클라이언트 가져오기
+        function getSupabaseClient() {
+            if (window.supabaseClient) {
+                return window.supabaseClient;
+            }
+            if (typeof supabase !== 'undefined') {
+                const SUPABASE_URL = 'https://jxeyvvstwoktkoaltmie.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXl2dnN0d29rdGtvYWx0bWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2MDQ5MTAsImV4cCI6MjA4MzE4MDkxMH0.iQOBtE9XH7EhZt2vC1wM_CrgD06oxCgHpus0LO8bc-I';
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return window.supabaseClient;
+            }
+            return null;
+        }
+
+        // Supabase에서 모든 강사와 클래스 정보 가져오기
+        async function getAllTeachers() {
             const teachers = [];
-            const keys = Object.keys(localStorage);
+            const supabaseClient = getSupabaseClient();
             
+            // Supabase에서 데이터 가져오기
+            if (supabaseClient) {
+                try {
+                    // 모든 클래스 가져오기
+                    const { data: classes, error: classesError } = await supabaseClient
+                        .from('classes')
+                        .select('*');
+                    
+                    if (classesError) {
+                        console.error('클래스 로드 오류:', classesError);
+                    } else if (classes && classes.length > 0) {
+                        // 각 클래스의 수강생 가져오기
+                        const teacherMap = new Map();
+                        
+                        for (const cls of classes) {
+                            const { data: students, error: studentsError } = await supabaseClient
+                                .from('students')
+                                .select('*')
+                                .eq('class_id', cls.id);
+                            
+                            if (!studentsError && students) {
+                                cls.students = students || [];
+                            } else {
+                                cls.students = [];
+                            }
+                            
+                            // 강사별로 클래스 그룹화
+                            const teacherUsername = cls.teacher_username || cls.created_by || 'unknown';
+                            if (!teacherMap.has(teacherUsername)) {
+                                teacherMap.set(teacherUsername, []);
+                            }
+                            teacherMap.get(teacherUsername).push(cls);
+                        }
+                        
+                        // Map을 배열로 변환
+                        teacherMap.forEach((classes, username) => {
+                            teachers.push({ username, classes });
+                        });
+                    }
+                } catch (error) {
+                    console.error('Supabase 데이터 로드 오류:', error);
+                }
+            }
+            
+            // localStorage 백업 데이터도 추가
+            const keys = Object.keys(localStorage);
             keys.forEach(key => {
                 if (key.startsWith('teacher_classes_')) {
                     const username = key.replace('teacher_classes_', '');
-                    const classes = JSON.parse(localStorage.getItem(key) || '[]');
-                    teachers.push({ username, classes });
+                    const existingTeacher = teachers.find(t => t.username === username);
+                    const localClasses = JSON.parse(localStorage.getItem(key) || '[]');
+                    
+                    if (existingTeacher) {
+                        // 이미 있으면 병합 (중복 제거)
+                        localClasses.forEach(localCls => {
+                            if (!existingTeacher.classes.find(c => c.id === localCls.id)) {
+                                existingTeacher.classes.push(localCls);
+                            }
+                        });
+                    } else {
+                        teachers.push({ username, classes: localClasses });
+                    }
                 }
             });
             
@@ -496,23 +571,88 @@
             return data ? JSON.parse(data) : null;
         }
 
-        function getAllClassData() {
+        async function getAllClassData() {
             const allData = {};
-            const keys = Object.keys(localStorage);
+            const supabaseClient = getSupabaseClient();
             
+            // Supabase에서 practice_data 가져오기
+            if (supabaseClient) {
+                try {
+                    const { data: practiceData, error } = await supabaseClient
+                        .from('practice_data')
+                        .select('*');
+                    
+                    if (!error && practiceData) {
+                        practiceData.forEach(item => {
+                            const classId = item.class_id;
+                            if (!allData[classId]) {
+                                allData[classId] = {
+                                    practice1: { words: {}, participants: [], lastUpdate: Date.now() },
+                                    practice2: { notes: [], participants: [], lastUpdate: Date.now() },
+                                    practice4: { students: {}, lastUpdate: Date.now() },
+                                    practice5: { reflections: [], participants: [], lastUpdate: Date.now() }
+                                };
+                            }
+                            
+                            // practice_type에 따라 데이터 저장
+                            let itemData = item.data;
+                            if (typeof itemData === 'string') {
+                                try {
+                                    itemData = JSON.parse(itemData);
+                                } catch (e) {
+                                    console.error('데이터 파싱 오류:', e);
+                                    return;
+                                }
+                            }
+                            
+                            if (item.practice_type === 'practice1' && itemData) {
+                                allData[classId].practice1 = {
+                                    words: itemData.words || {},
+                                    participants: Array.isArray(itemData.participants) ? itemData.participants : Object.keys(itemData.participants || {}),
+                                    lastUpdate: itemData.lastUpdate || item.updated_at
+                                };
+                            } else if (item.practice_type === 'practice2' && itemData) {
+                                allData[classId].practice2 = {
+                                    notes: itemData.notes || [],
+                                    participants: Array.isArray(itemData.participants) ? itemData.participants : Object.keys(itemData.participants || {}),
+                                    lastUpdate: itemData.lastUpdate || item.updated_at
+                                };
+                            } else if (item.practice_type === 'practice4' && itemData) {
+                                allData[classId].practice4 = {
+                                    students: itemData.students || {},
+                                    lastUpdate: itemData.lastUpdate || item.updated_at
+                                };
+                            } else if (item.practice_type === 'practice5' && itemData) {
+                                allData[classId].practice5 = {
+                                    reflections: itemData.reflections || [],
+                                    participants: Array.isArray(itemData.participants) ? itemData.participants : Object.keys(itemData.participants || {}),
+                                    lastUpdate: itemData.lastUpdate || item.updated_at
+                                };
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Supabase practice_data 로드 오류:', error);
+                }
+            }
+            
+            // localStorage 백업 데이터도 추가
+            const keys = Object.keys(localStorage);
             keys.forEach(key => {
                 if (key.startsWith('class_data_')) {
                     const classId = key.replace('class_data_', '');
-                    allData[classId] = JSON.parse(localStorage.getItem(key));
+                    if (!allData[classId]) {
+                        allData[classId] = JSON.parse(localStorage.getItem(key));
+                    }
                 }
             });
             
             return allData;
         }
 
-        function loadDashboard() {
-            const teachers = getAllTeachers();
-            const allClassData = getAllClassData();
+        async function loadDashboard() {
+            const teachers = await getAllTeachers();
+            const allClassData = await getAllClassData();
             
             let totalClasses = 0;
             let totalParticipants = 0;
@@ -548,10 +688,12 @@
             }
             
             container.innerHTML = teachers.map(teacher => {
-                const classesHtml = teacher.classes.map(cls => {
+                    const classesHtml = teacher.classes.map(cls => {
                     const data = allClassData[cls.id];
                     const practice1Count = data?.practice1 ? Object.keys(data.practice1.words || {}).length : 0;
                     const practice2Count = data?.practice2 ? (data.practice2.notes?.length || 0) : 0;
+                    const practice4Count = data?.practice4 && data.practice4.students ? Object.keys(data.practice4.students).length : 0;
+                    const practice5Count = data?.practice5 ? (data.practice5.reflections?.length || 0) : 0;
                     const studentCount = cls.students ? cls.students.length : 0;
                     
                     const studentsList = cls.students && cls.students.length > 0 
@@ -568,8 +710,8 @@
                             <div>
                                 <strong>${cls.name}</strong>
                                 ${cls.description ? '<br><small style="color: #666;">' + cls.description + '</small>' : ''}
-                                <br><small style="color: #999;">수강생: ${studentCount}명 | 실습1: ${practice1Count}개 | 실습2: ${practice2Count}개</small>
-                                <br><small style="color: #999;">등록 코드: ${cls.code || 'N/A'}</small>
+                                <br><small style="color: #999;">수강생: ${studentCount}명 | 실습1: ${practice1Count}개 | 실습2: ${practice2Count}개 | 실습4: ${practice4Count}개 | 실습5: ${practice5Count}개</small>
+                                <br><small style="color: #999;">등록 코드: ${cls.code || cls.id || 'N/A'}</small>
                                 ${studentCount > 0 ? `
                                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
                                         <strong style="font-size: 0.9em; color: #667eea;">수강생 목록:</strong>
@@ -756,50 +898,143 @@
             sessionStorage.removeItem('userSession');
         }
 
-        // 강사 삭제 함수
-        function deleteStudentFromAdmin(teacherUsername, classId, studentId) {
+        // 수강생 삭제 함수
+        async function deleteStudentFromAdmin(teacherUsername, classId, studentId) {
             if (!confirm('이 수강생을 삭제하시겠습니까?')) return;
             
-            const teachers = getAllTeachers();
-            const teacher = teachers.find(t => t.username === teacherUsername);
-            if (!teacher) return;
+            const supabaseClient = getSupabaseClient();
             
-            const cls = teacher.classes.find(c => c.id === classId);
-            if (!cls || !cls.students) return;
+            // Supabase에서 수강생 삭제
+            if (supabaseClient) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('students')
+                        .delete()
+                        .eq('id', studentId)
+                        .eq('class_id', classId);
+                    
+                    if (error) {
+                        console.error('수강생 삭제 오류:', error);
+                        alert('수강생 삭제 중 오류가 발생했습니다. 다시 시도해주세요.');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('수강생 삭제 예외:', error);
+                    alert('수강생 삭제 중 오류가 발생했습니다.');
+                    return;
+                }
+            }
             
-            cls.students = cls.students.filter(s => s.id !== studentId);
-            saveAllTeachers(teachers);
-            loadTeachers();
+            // localStorage에서도 삭제 (백업 데이터)
+            try {
+                const teachers = await getAllTeachers();
+                const teacher = teachers.find(t => t.username === teacherUsername);
+                if (teacher) {
+                    const cls = teacher.classes.find(c => c.id === classId);
+                    if (cls && cls.students) {
+                        cls.students = cls.students.filter(s => s.id !== studentId);
+                        // localStorage에 저장 (백업)
+                        const teacherClassesKey = `teacher_classes_${teacherUsername}`;
+                        localStorage.setItem(teacherClassesKey, JSON.stringify(teacher.classes));
+                    }
+                }
+            } catch (error) {
+                console.error('로컬 데이터 업데이트 오류:', error);
+            }
+            
             alert('수강생이 삭제되었습니다.');
+            // 대시보드 새로고침
+            await loadDashboard();
         }
 
-        function deleteTeacher(username) {
-            if (!confirm(`정말로 강사 "${username}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 해당 강사의 모든 클래스와 데이터가 삭제됩니다.`)) {
+        async function deleteTeacher(username) {
+            if (!confirm(`정말로 강사 "${username}"을(를) 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 해당 강사의 모든 클래스, 수강생, 실습 데이터가 삭제됩니다.`)) {
                 return;
             }
 
-            // 강사의 모든 클래스 가져오기
-            const teacherClassesKey = `teacher_classes_${username}`;
-            const classes = JSON.parse(localStorage.getItem(teacherClassesKey) || '[]');
+            const supabaseClient = getSupabaseClient();
+            
+            // Supabase에서 강사 관련 데이터 삭제
+            if (supabaseClient) {
+                try {
+                    // 1. 해당 강사의 모든 클래스 가져오기
+                    const { data: classes, error: classesError } = await supabaseClient
+                        .from('classes')
+                        .select('id')
+                        .eq('teacher_username', username);
+                    
+                    if (classesError) {
+                        console.error('클래스 조회 오류:', classesError);
+                    } else if (classes && classes.length > 0) {
+                        const classIds = classes.map(c => c.id);
+                        
+                        // 2. 각 클래스의 모든 수강생 삭제
+                        for (const classId of classIds) {
+                            const { error: studentsError } = await supabaseClient
+                                .from('students')
+                                .delete()
+                                .eq('class_id', classId);
+                            
+                            if (studentsError) {
+                                console.error(`수강생 삭제 오류 (classId: ${classId}):`, studentsError);
+                            }
+                            
+                            // 3. 각 클래스의 실습 데이터 삭제
+                            const { error: practiceError } = await supabaseClient
+                                .from('practice_data')
+                                .delete()
+                                .eq('class_id', classId);
+                            
+                            if (practiceError) {
+                                console.error(`실습 데이터 삭제 오류 (classId: ${classId}):`, practiceError);
+                            }
+                        }
+                        
+                        // 4. 모든 클래스 삭제
+                        const { error: deleteClassesError } = await supabaseClient
+                            .from('classes')
+                            .delete()
+                            .eq('teacher_username', username);
+                        
+                        if (deleteClassesError) {
+                            console.error('클래스 삭제 오류:', deleteClassesError);
+                            alert('클래스 삭제 중 오류가 발생했습니다.');
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Supabase 삭제 예외:', error);
+                    alert('데이터 삭제 중 오류가 발생했습니다.');
+                    return;
+                }
+            }
 
-            // 각 클래스의 데이터 삭제
-            classes.forEach(cls => {
-                const classDataKey = `class_data_${cls.id}`;
-                localStorage.removeItem(classDataKey);
-            });
-
-            // 강사의 클래스 목록 삭제
-            localStorage.removeItem(teacherClassesKey);
-
-            // 강사 정보 삭제 (teachers 배열에서)
-            const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
-            const updatedTeachers = teachers.filter(t => t.username !== username);
-            localStorage.setItem('teachers', JSON.stringify(updatedTeachers));
+            // localStorage에서도 삭제 (백업 데이터)
+            try {
+                const teacherClassesKey = `teacher_classes_${username}`;
+                const classes = JSON.parse(localStorage.getItem(teacherClassesKey) || '[]');
+                
+                // 각 클래스의 데이터 삭제
+                classes.forEach(cls => {
+                    const classDataKey = `class_data_${cls.id}`;
+                    localStorage.removeItem(classDataKey);
+                });
+                
+                // 강사의 클래스 목록 삭제
+                localStorage.removeItem(teacherClassesKey);
+                
+                // 강사 정보 삭제 (teachers 배열에서)
+                const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
+                const updatedTeachers = teachers.filter(t => t.username !== username);
+                localStorage.setItem('teachers', JSON.stringify(updatedTeachers));
+            } catch (error) {
+                console.error('로컬 데이터 삭제 오류:', error);
+            }
 
             alert(`강사 "${username}"과(와) 관련된 모든 데이터가 삭제되었습니다.`);
             
             // 대시보드 새로고침
-            loadDashboard();
+            await loadDashboard();
         }
 
         // 모달 관련 변수
@@ -1152,8 +1387,8 @@
         }
 
         // 초기화
-        window.addEventListener('load', function() {
-            loadDashboard();
+        window.addEventListener('load', async function() {
+            await loadDashboard();
         });
     </script>
 </body>

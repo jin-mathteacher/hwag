@@ -302,7 +302,7 @@
         <div class="tab-container">
             <button class="tab-button active" onclick="switchTab('practice1')">실습 1 - 워드크라우드</button>
             <button class="tab-button" onclick="switchTab('practice2')">실습 2 - 담벼락</button>
-            <button class="tab-button" onclick="switchTab('practice4')">실습 4 - 교육 현황 공유하기</button>
+            <button class="tab-button" onclick="switchTab('practice4')">실습 4 - 연구 주제 연결 활동</button>
             <button class="tab-button" onclick="switchTab('practice5')">실습 5 - 성찰 기록 연습</button>
         </div>
 
@@ -396,29 +396,38 @@
             <div class="admin-controls">
                 <button class="admin-btn refresh-btn" onclick="refreshPractice4Data()">🔄 새로고침</button>
                 <button class="admin-btn export-btn" onclick="exportPractice4Data()">📥 데이터 내보내기</button>
-                <button class="admin-btn image-btn" onclick="downloadPractice4Image()">🖼️ 이미지 다운로드</button>
                 <button class="admin-btn clear-btn" onclick="clearPractice4Data()">🗑️ 전체 삭제</button>
             </div>
 
             <div class="wallboard-stats">
                 <div class="wallboard-stat">
-                    <h4>총 메모 수</h4>
-                    <div class="value" id="practice4NoteCount">0</div>
-                </div>
-                <div class="wallboard-stat">
                     <h4>참여자 수</h4>
                     <div class="value" id="practice4ParticipantCount">0</div>
                 </div>
-            </div>
-
-            <div class="word-list-section">
-                <h2>📌 메모 목록</h2>
-                <div id="practice4NoteList">
-                    <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>
+                <div class="wallboard-stat">
+                    <h4>완료한 수강생</h4>
+                    <div class="value" id="practice4CompletedCount">0</div>
                 </div>
             </div>
 
-            <div class="last-update">
+            <div style="display: flex; gap: 20px; margin-top: 30px;">
+                <!-- 좌측: 수강생 목록 -->
+                <div style="flex: 0 0 250px; background: #f9f9f9; padding: 20px; border-radius: 10px; max-height: 600px; overflow-y: auto;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">수강생 목록</h3>
+                    <div id="practice4StudentList">
+                        <p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>
+                    </div>
+                </div>
+
+                <!-- 우측: 선택한 수강생의 데이터 -->
+                <div style="flex: 1; background: #f9f9f9; padding: 30px; border-radius: 10px;">
+                    <div id="practice4StudentDetail">
+                        <p style="text-align: center; color: #999; padding: 40px;">좌측에서 수강생을 선택하세요.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="last-update" style="margin-top: 20px;">
                 마지막 업데이트: <span id="practice4LastUpdateTime">-</span>
             </div>
         </div>
@@ -493,6 +502,7 @@
         // Supabase Realtime 구독 변수
         let realtimeSubscription1 = null;
         let realtimeSubscription2 = null;
+        let realtimeSubscription4 = null;
         
         // 총 관리자가 다른 강사의 클래스를 볼 때 헤더에 클래스 정보 표시
         if (queryClassId && queryClassName) {
@@ -532,7 +542,7 @@
             } else if (tabName === 'practice4') {
                 buttons[2].classList.add('active');
                 document.getElementById('practice4-tab').classList.add('active');
-                refreshPractice4Data();
+                await refreshPractice4Data();
             } else if (tabName === 'practice5') {
                 buttons[3].classList.add('active');
                 document.getElementById('practice5-tab').classList.add('active');
@@ -887,6 +897,34 @@
                     console.log('📡 실습 2 Realtime 구독 상태:', status);
                 });
 
+            // 실습 4 구독
+            if (realtimeSubscription4) {
+                supabaseClient.removeChannel(realtimeSubscription4);
+            }
+            
+            const filter4 = (session.type === 'admin' && !queryClassId) 
+                ? `practice_type=eq.practice4`
+                : `class_id=eq.${CLASS_ID} AND practice_type=eq.practice4`;
+            
+            realtimeSubscription4 = supabaseClient
+                .channel(`practice_data_${session.type === 'admin' && !queryClassId ? 'all' : CLASS_ID}_practice4`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'practice_data',
+                        filter: filter4
+                    },
+                    async (payload) => {
+                        console.log('🔄 실습 4 실시간 업데이트 수신:', payload);
+                        await refreshPractice4Data();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 실습 4 Realtime 구독 상태:', status);
+                });
+
             // 실습 5 구독
             if (realtimeSubscription5) {
                 supabaseClient.removeChannel(realtimeSubscription5);
@@ -918,12 +956,17 @@
             // Supabase Realtime 구독 설정
             setupRealtimeSubscriptions();
             
+            // 초기 로드 시 practice4 데이터도 로드 (비활성 탭이어도 백그라운드에서 로드)
+            loadPractice4Data().catch(err => console.error('Practice4 초기 로드 오류:', err));
+            
             // 주기적으로 새로고침 (Realtime이 실패할 경우를 대비)
             setInterval(async function() {
                 if (document.getElementById('practice1-tab').classList.contains('active')) {
                     await refreshData();
                 } else if (document.getElementById('practice2-tab').classList.contains('active')) {
                     await refreshWallboardData();
+                } else if (document.getElementById('practice4-tab').classList.contains('active')) {
+                    await refreshPractice4Data();
                 } else if (document.getElementById('practice5-tab').classList.contains('active')) {
                     await refreshPractice5Data();
                 }
@@ -1285,58 +1328,266 @@
             }
         }
 
-        // 실습 4 관리 함수들 (STORAGE_KEY는 이미 위에서 정의됨)
+        // 실습 4 관리 함수들 (연구 주제 연결 활동)
 
-        function loadPractice4Data() {
-            const data = localStorage.getItem(PRACTICE4_STORAGE_KEY);
-            if (data) {
-                return JSON.parse(data);
+        let practice4Data = { students: {}, lastUpdate: Date.now() };
+        let selectedStudentId = null;
+
+        async function loadPractice4Data() {
+            const supabaseClient = getSupabaseClient();
+            
+            if (supabaseClient) {
+                try {
+                    // 총 관리자 모드인 경우 모든 클래스 데이터 수집
+                    let query = supabaseClient
+                        .from('practice_data')
+                        .select('*')
+                        .eq('practice_type', 'practice4');
+                    
+                    // 특정 클래스만 보는 경우 필터 추가
+                    if (queryClassId) {
+                        query = query.eq('class_id', queryClassId);
+                    } else if (session.type === 'teacher' && CLASS_ID) {
+                        query = query.eq('class_id', CLASS_ID);
+                    }
+                    
+                    const { data, error } = await query;
+                    
+                    if (error) {
+                        console.error('Supabase 데이터 로드 오류:', error);
+                        practice4Data = { students: {}, lastUpdate: Date.now() };
+                        return practice4Data;
+                    }
+                    
+                    // 모든 클래스의 수강생 데이터를 통합
+                    practice4Data = { students: {}, lastUpdate: Date.now() };
+                    
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            if (item && item.data) {
+                                // JSON 문자열인 경우 파싱
+                                let itemData = item.data;
+                                if (typeof itemData === 'string') {
+                                    try {
+                                        itemData = JSON.parse(itemData);
+                                    } catch (e) {
+                                        console.error('데이터 파싱 오류:', e);
+                                        return;
+                                    }
+                                }
+                                
+                                if (itemData && itemData.students) {
+                                    Object.keys(itemData.students).forEach(studentId => {
+                                        const studentData = itemData.students[studentId];
+                                        // classId를 포함하여 저장 (같은 userId가 여러 클래스에 있을 수 있음)
+                                        const uniqueKey = `${item.class_id}_${studentId}`;
+                                        practice4Data.students[uniqueKey] = {
+                                            ...studentData,
+                                            classId: item.class_id
+                                        };
+                                    });
+                                }
+                                
+                                if (itemData && itemData.lastUpdate) {
+                                    const itemTime = new Date(itemData.lastUpdate).getTime();
+                                    const currentTime = new Date(practice4Data.lastUpdate).getTime();
+                                    if (itemTime > currentTime) {
+                                        practice4Data.lastUpdate = itemData.lastUpdate;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    console.log('📊 Practice4 데이터 로드 완료:', practice4Data);
+                    
+                    return practice4Data;
+                } catch (error) {
+                    console.error('데이터 로드 예외:', error);
+                    practice4Data = { students: {}, lastUpdate: Date.now() };
+                    return practice4Data;
+                }
             }
-            return { notes: [], lastUpdate: Date.now() };
+            
+            practice4Data = { students: {}, lastUpdate: Date.now() };
+            return practice4Data;
         }
 
-        function refreshPractice4Data() {
-            const data = loadPractice4Data();
-            const notes = data.notes || [];
+        async function refreshPractice4Data() {
+            await loadPractice4Data();
             
-            document.getElementById('practice4NoteCount').textContent = notes.length;
-            const uniqueParticipants = new Set(notes.map(note => note.userId));
-            document.getElementById('practice4ParticipantCount').textContent = uniqueParticipants.size;
+            const students = practice4Data.students || {};
+            const studentIds = Object.keys(students);
+            const completedCount = studentIds.filter(id => {
+                const student = students[id];
+                return student && student.finalResult && student.finalResult.researchTopic;
+            }).length;
             
-            const container = document.getElementById('practice4NoteList');
-            if (notes.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>';
+            document.getElementById('practice4ParticipantCount').textContent = studentIds.length;
+            document.getElementById('practice4CompletedCount').textContent = completedCount;
+            
+            // 수강생 목록 렌더링
+            const studentListContainer = document.getElementById('practice4StudentList');
+            if (studentIds.length === 0) {
+                studentListContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">데이터가 없습니다.</p>';
             } else {
-                const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
-                container.innerHTML = sortedNotes.map((note, index) => {
-                    const date = new Date(note.timestamp);
+                // 타임스탬프 기준으로 정렬 (최신순)
+                const sortedStudents = studentIds.sort((a, b) => {
+                    const timeA = students[a].timestamp || 0;
+                    const timeB = students[b].timestamp || 0;
+                    return timeB - timeA;
+                });
+                
+                studentListContainer.innerHTML = sortedStudents.map((studentId, index) => {
+                    const student = students[studentId];
+                    const isCompleted = student.finalResult && student.finalResult.researchTopic;
+                    const isSelected = selectedStudentId === studentId;
+                    const className = isCompleted ? 'completed' : 'incomplete';
+                    
                     return `
-                        <div class="word-item">
-                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
-                                <span class="word-text">#${index + 1} - ${note.userName || '익명'}</span>
-                                <span style="color: #999; font-size: 0.9em;">${date.toLocaleString('ko-KR')}</span>
+                        <button 
+                            class="student-button ${className} ${isSelected ? 'selected' : ''}"
+                            onclick="selectPractice4Student('${studentId}')"
+                            style="
+                                width: 100%;
+                                padding: 12px 15px;
+                                margin-bottom: 10px;
+                                border: 2px solid ${isSelected ? '#667eea' : (isCompleted ? '#4CAF50' : '#ddd')};
+                                background: ${isSelected ? '#667eea' : (isCompleted ? '#f0f9f0' : '#fff')};
+                                color: ${isSelected ? '#fff' : '#333'};
+                                border-radius: 8px;
+                                cursor: pointer;
+                                text-align: left;
+                                transition: all 0.3s ease;
+                            "
+                        >
+                            <div style="font-weight: bold; margin-bottom: 5px;">
+                                ${isCompleted ? '✅' : '⏳'} ${student.userName || '익명'}
                             </div>
-                            <div style="background: ${note.color || '#fff'}; padding: 15px; border-radius: 10px; width: 100%; margin-top: 10px;">
-                                <div style="color: #333;">${note.content.replace(/\n/g, '<br>')}</div>
+                            <div style="font-size: 0.85em; opacity: 0.8;">
+                                ${isCompleted ? '완료' : '진행 중'}
                             </div>
-                        </div>
+                        </button>
                     `;
                 }).join('');
             }
             
-            if (data.lastUpdate) {
-                const date = new Date(data.lastUpdate);
+            // 선택된 수강생이 있으면 상세 정보 표시
+            if (selectedStudentId && students[selectedStudentId]) {
+                displayPractice4StudentDetail(students[selectedStudentId]);
+            } else if (studentIds.length > 0) {
+                // 첫 번째 수강생 자동 선택
+                selectedStudentId = sortedStudents[0];
+                displayPractice4StudentDetail(students[selectedStudentId]);
+            } else {
+                document.getElementById('practice4StudentDetail').innerHTML = 
+                    '<p style="text-align: center; color: #999; padding: 40px;">좌측에서 수강생을 선택하세요.</p>';
+            }
+            
+            // 마지막 업데이트 시간 표시
+            if (practice4Data.lastUpdate) {
+                const date = new Date(practice4Data.lastUpdate);
                 document.getElementById('practice4LastUpdateTime').textContent = date.toLocaleString('ko-KR');
             }
         }
 
+        function selectPractice4Student(studentId) {
+            selectedStudentId = studentId;
+            const student = practice4Data.students[studentId];
+            if (student) {
+                displayPractice4StudentDetail(student);
+                // 버튼 선택 상태 업데이트
+                refreshPractice4Data();
+            }
+        }
+
+        function displayPractice4StudentDetail(student) {
+            const container = document.getElementById('practice4StudentDetail');
+            
+            const step1Completed = student.rootCause ? '✅' : '⏳';
+            const step2Completed = (student.independentVar && student.dependentVar) ? '✅' : '⏳';
+            const step3Completed = student.researchQuestion ? '✅' : '⏳';
+            const step4Completed = student.finalResult && student.finalResult.researchTopic ? '✅' : '⏳';
+            
+            const date = student.timestamp ? new Date(student.timestamp).toLocaleString('ko-KR') : '-';
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 30px;">
+                    <h2 style="color: #667eea; margin-bottom: 10px;">
+                        ${student.userName || '익명'} 님의 연구 설계
+                    </h2>
+                    <p style="color: #999; font-size: 0.9em;">작성 시간: ${date}</p>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #88d8c0;">
+                    <h3 style="color: #6bc4a9; margin-bottom: 15px;">
+                        ${step1Completed} Step 1: 마음 열기 (근본 원인)
+                    </h3>
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-height: 60px;">
+                        ${student.rootCause ? student.rootCause.replace(/\n/g, '<br>') : '<span style="color: #999;">미입력</span>'}
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #88d8c0;">
+                    <h3 style="color: #6bc4a9; margin-bottom: 15px;">
+                        ${step2Completed} Step 2: 변수 분리하기
+                    </h3>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 8px; color: #666;">독립변인 / 조작변인:</div>
+                        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-height: 40px;">
+                            ${student.independentVar || '<span style="color: #999;">미입력</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 8px; color: #666;">종속변인 / 관찰변인:</div>
+                        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-height: 40px;">
+                            ${student.dependentVar || '<span style="color: #999;">미입력</span>'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #88d8c0;">
+                    <h3 style="color: #6bc4a9; margin-bottom: 15px;">
+                        ${step3Completed} Step 3: 연구 질문 다듬기
+                    </h3>
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; min-height: 60px;">
+                        ${student.researchQuestion ? student.researchQuestion.replace(/\n/g, '<br>') : '<span style="color: #999;">미입력</span>'}
+                    </div>
+                </div>
+                
+                ${student.finalResult && student.finalResult.researchTopic ? `
+                <div style="background: linear-gradient(135deg, #88d8c0 0%, #6bc4a9 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 20px; font-size: 1.3em;">
+                        ${step4Completed} Step 4: 최종 결과물
+                    </h3>
+                    <div style="background: rgba(255, 255, 255, 0.2); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">[연구 주제]</div>
+                        <div style="line-height: 1.8;">${student.finalResult.researchTopic}</div>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.2); padding: 20px; border-radius: 10px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">[연구 질문]</div>
+                        <div style="line-height: 1.8;">${student.finalResult.researchQuestion}</div>
+                    </div>
+                </div>
+                ` : `
+                <div style="background: white; padding: 25px; border-radius: 10px; border-left: 4px solid #ffc107;">
+                    <h3 style="color: #ff9800; margin-bottom: 15px;">
+                        ${step4Completed} Step 4: 결과물 확인
+                    </h3>
+                    <div style="color: #666; padding: 15px;">
+                        아직 최종 결과물이 생성되지 않았습니다.
+                    </div>
+                </div>
+                `}
+            `;
+        }
+
         function exportPractice4Data() {
-            const data = loadPractice4Data();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(practice4Data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `practice4_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `practice4_research_design_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1344,31 +1595,42 @@
             alert('데이터가 내보내졌습니다!');
         }
 
-        function clearPractice4Data() {
-            if (confirm('정말로 실습 4의 모든 메모를 삭제하시겠습니까?')) {
-                const data = { notes: [], lastUpdate: Date.now() };
-                localStorage.setItem(PRACTICE4_STORAGE_KEY, JSON.stringify(data));
-                refreshPractice4Data();
-                alert('모든 데이터가 삭제되었습니다.');
+        async function clearPractice4Data() {
+            if (!confirm('정말로 실습 4의 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                return;
             }
-        }
-
-        async function downloadPractice4Image() {
-            const container = document.getElementById('practice4NoteList');
-            try {
-                const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2 });
-                canvas.toBlob(function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `practice4_image_${new Date().toISOString().split('T')[0]}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                });
-            } catch (error) {
-                alert('이미지 생성 중 오류가 발생했습니다.');
+            
+            const supabaseClient = getSupabaseClient();
+            if (supabaseClient) {
+                try {
+                    let query = supabaseClient
+                        .from('practice_data')
+                        .delete()
+                        .eq('practice_type', 'practice4');
+                    
+                    if (queryClassId) {
+                        query = query.eq('class_id', queryClassId);
+                    } else if (session.type === 'teacher' && CLASS_ID) {
+                        query = query.eq('class_id', CLASS_ID);
+                    }
+                    
+                    const { error } = await query;
+                    
+                    if (error) {
+                        console.error('삭제 오류:', error);
+                        alert('삭제 중 오류가 발생했습니다.');
+                    } else {
+                        practice4Data = { students: {}, lastUpdate: Date.now() };
+                        selectedStudentId = null;
+                        await refreshPractice4Data();
+                        alert('모든 데이터가 삭제되었습니다.');
+                    }
+                } catch (error) {
+                    console.error('삭제 예외:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
+                }
+            } else {
+                alert('Supabase 연결이 필요합니다.');
             }
         }
 
