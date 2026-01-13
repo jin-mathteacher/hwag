@@ -56,6 +56,53 @@
             font-size: 1rem;
         }
 
+        .player-count-selector {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .count-btn {
+            background-color: rgba(255, 255, 255, 0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 60px;
+        }
+
+        .count-btn:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .count-btn.selected {
+            background-color: #ffd700;
+            color: #d81b60;
+            border-color: #ffd700;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        #player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+            align-items: center;
+        }
+
+        #player-inputs input {
+            width: 200px;
+            padding: 12px;
+            font-size: 1rem;
+        }
+
         button {
             background-color: #ffd700; 
             color: #d81b60; 
@@ -265,14 +312,18 @@
     </div>
 
     <div id="setup-screen" class="container">
-        <h3>참여자 명단 입력 (4~5명)</h3>
-        <div id="player-inputs">
-            <input type="text" placeholder="이름" value="선생님1">
-            <input type="text" placeholder="이름" value="선생님2">
-            <input type="text" placeholder="이름" value="선생님3">
-            <input type="text" placeholder="이름" value="선생님4">
-            <input type="text" placeholder="이름(선택)">
+        <h3>참여 인원 수를 선택하세요</h3>
+        <div class="player-count-selector">
+            <button class="count-btn" onclick="selectPlayerCount(2)">2명</button>
+            <button class="count-btn" onclick="selectPlayerCount(3)">3명</button>
+            <button class="count-btn" onclick="selectPlayerCount(4)">4명</button>
+            <button class="count-btn" onclick="selectPlayerCount(5)">5명</button>
+            <button class="count-btn" onclick="selectPlayerCount(6)">6명</button>
         </div>
+        <div id="player-inputs">
+            <!-- 동적으로 생성됨 -->
+        </div>
+        <p style="font-size:0.9rem; opacity:0.8;">인원 수를 선택한 후 이름을 입력하고 시작하세요.</p>
         <p style="font-size:0.9rem; opacity:0.8;">입력 후 시작하면 3단계 게임이 연속으로 진행됩니다.</p>
         <button onclick="initGame()">게임 시작 ♬</button>
     </div>
@@ -292,7 +343,36 @@
         let players = [];
         let currentStage = 1; // 1: 자기소개, 2: 동기/목표, 3: 역할분담
         let targetNumber = 0;
+        let selectedPlayerCount = 4; // 기본값 4명
         const roles = ["조장", "서기", "행동위원", "발표자"];
+
+        // 인원 수 선택 함수
+        function selectPlayerCount(count) {
+            selectedPlayerCount = count;
+            
+            // 선택된 버튼 스타일 업데이트
+            document.querySelectorAll('.count-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            
+            // 이름 입력 필드 생성
+            createPlayerInputs(count);
+        }
+
+        // 이름 입력 필드 동적 생성 함수
+        function createPlayerInputs(count) {
+            const container = document.getElementById('player-inputs');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= count; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `이름 ${i}`;
+                input.value = `선생님${i}`;
+                container.appendChild(input);
+            }
+        }
 
         // 게임 초기화 (최초 1회)
         function initGame() {
@@ -302,8 +382,8 @@
                 if(input.value.trim() !== "") players.push(input.value.trim());
             });
 
-            if (players.length < 4) {
-                alert("최소 4명의 선생님이 필요합니다!");
+            if (players.length < 2) {
+                alert("최소 2명의 선생님이 필요합니다!");
                 return;
             }
 
@@ -694,10 +774,15 @@
             window.location.href = 'login.html';
         }
 
-        // 페이지 로드 시 배경음악 준비
+        // 페이지 로드 시 초기 설정
         window.addEventListener('load', function() {
             const bgm = document.getElementById('bgm');
             bgm.volume = 0.5;
+            
+            // 기본 4명 선택 및 입력 필드 생성
+            selectPlayerCount(4);
+            // 4명 버튼을 기본 선택 상태로
+            document.querySelectorAll('.count-btn')[2].classList.add('selected');
         });
     </script>
     <div class="credit">
